@@ -30,10 +30,10 @@ const SubInfoRow = styled.View`
   padding-top: 12px;
 `;
 
-const SubInfoText = styled.Text`
-  color: #aaa;
-  font-size: 13px;
-`;
+// const SubInfoText = styled.Text`
+//   color: #aaa;
+//   font-size: 13px;
+// `;
 
 // 사용자가 가장 먼저 보게 될 화면
 // 통장 정보와 송금 버튼을 보여줌
