@@ -19,6 +19,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
+    
     <NavigationContainer>
       {/* headerShown: false는 상단에 기본 헤더(뒤로가기 버튼 등)를 숨기는 역할 */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>

@@ -103,13 +103,13 @@ export default function AccountDetailScreen() {
 
       {/* 잔액 및 계좌번호 */}
       <AccountInfo>
-        <BankName>우리은행 1002964460061</BankName>
+        <BankName>Finguard은행 1002964460061</BankName>
         <Balance>1,234,567원</Balance>
       </AccountInfo>
 
       {/* 거래내역 */}
       <Transaction>
-        <Label>6.19 우리체크캐시백</Label>
+        <Label>6.19 Finguard캐시백</Label>
         <TransactionRow>
           <Label>10:56</Label>
           <Amount isPositive={true}>+745원</Amount>
