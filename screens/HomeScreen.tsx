@@ -60,6 +60,7 @@ export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
   return (
     <Container>
       <TopBar>
+        {/* 버튼 클릭 이벤트가 제대로 되지 않아서 임시 수정 */}
         <LogoutButton hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={handleLogout}>
           <LogoutText>로그아웃</LogoutText>
         </LogoutButton>
