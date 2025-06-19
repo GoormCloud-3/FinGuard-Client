@@ -78,8 +78,10 @@ const ActionText = styled.Text`
   font-weight: bold;
   font-size: 16px;
 `;
+// 사용자가 송금 버튼을 눌렀을 때 나오는 상세 화면
 
 export default function AccountDetailScreen() {
+  // 화면에서 뒤로 돌아가기 기능을 위해 navigation 객체 사용
   const navigation = useNavigation<AccountDetailNavigationProp>();
 
   return (

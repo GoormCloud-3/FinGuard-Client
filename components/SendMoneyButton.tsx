@@ -18,6 +18,8 @@ const ButtonText = styled.Text`
   font-weight: 600;
 `;
 
+// 버튼 UI 컴포넌트
+
 export default function SendMoneyButton({ onPress }: Props) {
   return (
     <Button onPress={onPress}>

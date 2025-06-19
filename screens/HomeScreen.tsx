@@ -3,7 +3,6 @@ import styled from 'styled-components/native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-
 import AccountCard from '../components/AccountCard';
 import SendMoneyButton from '../components/SendMoneyButton';
 
@@ -36,15 +35,24 @@ const SubInfoText = styled.Text`
   font-size: 13px;
 `;
 
+// 사용자가 가장 먼저 보게 될 화면
+// 통장 정보와 송금 버튼을 보여줌
+// 버튼을 누르면 AccountDetailScreen으로 이동
+
 export default function HomeScreen() {
+    // 화면 전체를 위한 객체
+    // navigate('AccountDetail') 같은 메서드를 사용하려면 타입을 정확히 지정해야 오류가 나지 않는다.
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   return (
     <Container>
       <CardWrapper>
+        {/*  통장 이름과 잔액을 보여주는 컴포넌트. props로 값 전달 */}
+        {/* 추후에 실제 데이터 받아서 수정 필요 */}
         <AccountCard accountName="FinGuard 통장" balance={1234567} />
         <SubInfoRow>
         </SubInfoRow>
+        {/* 버튼을 누르면 AccountDetailScreen으로 이동 */}
         <SendMoneyButton onPress={() => navigation.navigate('AccountDetail')} />
       </CardWrapper>
     </Container>

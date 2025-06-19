@@ -23,6 +23,8 @@ const Balance = styled.Text`
   color: #1e88e5;
   margin-top: 8px;
 `;
+//  통장 UI 컴포넌트
+// props로 전달받은 통장 이름과 잔액을 화면에 표시
 
 export default function AccountCard({ accountName, balance }: Props) {
   return (
