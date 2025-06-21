@@ -11,6 +11,10 @@ import HomeScreen from './screens/HomeScreen';
 import AccountDetailScreen from './screens/AccountDetailScreen';
 import { RootStackParamList } from './types';
 
+
+
+
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
