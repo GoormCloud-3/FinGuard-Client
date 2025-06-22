@@ -6,6 +6,36 @@ import { signUp } from '../src/cognito';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types';
 
+// 위도/경도 계산 함수
+const getCoordinatesFromAddress = async (address: string) => {
+  const kakaoApiKey = 'ac5e090b1a0ac086dad0202b329adfd4'; // REST API 키를 넣거나 .env로 분리
+
+  const response = await fetch(
+    `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `KakaoAK ${kakaoApiKey}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (data.documents && data.documents.length > 0) {
+    const location = data.documents[0].address;
+
+    return {
+      latitude: location.y,  // 위도
+      longitude: location.x, // 경도
+      
+    };
+  } else {
+    throw new Error('주소로부터 좌표를 찾을 수 없습니다.');
+  }
+};
+
+
 type SignupNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Signup'>;
 
 const Container = styled.ScrollView`
@@ -60,6 +90,8 @@ const ButtonText = styled.Text`
   font-weight: 600;
 `;
 
+
+
 export default function SignupScreen() {
   const navigation = useNavigation<SignupNavigationProp>();
 
@@ -72,7 +104,19 @@ export default function SignupScreen() {
 
   const handleSignup = async () => {
     try {
-      await signUp({ id, password, name, email, birthdate, address });
+      const { latitude, longitude } = await getCoordinatesFromAddress(address);
+
+      await signUp({
+        id,
+        password,
+        name,
+        email,
+        birthdate,
+        address,
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+      });
+
       Alert.alert('회원가입 완료', '이제 로그인해주세요.');
       navigation.navigate('Welcome');
     } catch (error: any) {

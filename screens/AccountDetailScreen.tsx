@@ -1,10 +1,24 @@
 import React from 'react';
 import styled from 'styled-components/native';
-import { useNavigation } from '@react-navigation/native';
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 
 type AccountDetailNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AccountDetail'>;
+type AccountDetailRouteProp = RouteProp<RootStackParamList, 'AccountDetail'>;
+
+type AccountInfo = {
+  name: string;
+  number: string;
+  balance: number;
+};
+
+const accountData: Record<string, AccountInfo> = {
+  '1': { name: '토스뱅크 통장', number: '1000123456789', balance: 0 },
+  '2': { name: '저축예금', number: '1028374650912', balance: 1927132 },
+  '3': { name: 'IBK 간편한통장', number: '1234567890123', balance: 102818 },
+  '4': { name: '쏠편한 입출금통장', number: '9876543210987', balance: 58 },
+};
 
 const Container = styled.ScrollView`
   flex: 1;
@@ -27,7 +41,7 @@ const BackText = styled.Text`
   font-size: 36px;
 `;
 
-const AccountInfo = styled.View`
+const AccountInfoBox = styled.View`
   margin-bottom: 24px;
 `;
 
@@ -78,15 +92,25 @@ const ActionText = styled.Text`
   font-weight: bold;
   font-size: 16px;
 `;
-// 사용자가 송금 버튼을 눌렀을 때 나오는 상세 화면
 
 export default function AccountDetailScreen() {
-  // 화면에서 뒤로 돌아가기 기능을 위해 navigation 객체 사용
   const navigation = useNavigation<AccountDetailNavigationProp>();
+  const route = useRoute<AccountDetailRouteProp>();
+  const { accountId } = route.params;
+
+  const account = accountData[accountId];
+
+  if (!account) {
+    return (
+      <Container>
+        <Label>해당 계좌 정보를 찾을 수 없습니다.</Label>
+      </Container>
+    );
+  }
 
   return (
     <Container>
-      {/* 🔙 상단 뒤로가기 버튼 */}
+      {/* 상단 뒤로가기 */}
       <Header>
         <BackButton
           onPress={() => {
@@ -101,13 +125,13 @@ export default function AccountDetailScreen() {
         </BackButton>
       </Header>
 
-      {/* 잔액 및 계좌번호 */}
-      <AccountInfo>
-        <BankName>Finguard은행 1002964460061</BankName>
-        <Balance>1,234,567원</Balance>
-      </AccountInfo>
+      {/* 계좌 정보 */}
+      <AccountInfoBox>
+        <BankName>{account.name} {account.number}</BankName>
+        <Balance>{account.balance.toLocaleString()}원</Balance>
+      </AccountInfoBox>
 
-      {/* 거래내역 */}
+      {/* 거래내역 예시 */}
       <Transaction>
         <Label>6.19 Finguard캐시백</Label>
         <TransactionRow>

@@ -3,13 +3,14 @@ import styled from 'styled-components/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types';
 import { useNavigation } from '@react-navigation/native';
+import { signIn } from '../src/cognito';
+import { Alert } from 'react-native';
 
 type LoginNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 type Props = {
   setIsLoggedIn: (value: boolean) => void;
 };
-
 const Container = styled.SafeAreaView`
   flex: 1;
   background-color: #121212;
@@ -52,15 +53,22 @@ const ButtonText = styled.Text`
   font-weight: 600;
 `;
 
+
+
+
 export default function LoginScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<LoginNavigationProp>();
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    // TODO: 실제 로그인 처리 로직 추가 가능
-    // 여기서는 테스트용으로 로그인 처리 후 isLoggedIn 상태 변경
-    setIsLoggedIn(true);
+  const handleLogin = async () => {
+    try {
+      await signIn(id, password);
+      Alert.alert('로그인 성공', '환영합니다!');
+      setIsLoggedIn(true); // App.tsx에서 Home으로 전환
+    } catch (error: any) {
+      Alert.alert('로그인 실패', error.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+    }
   };
 
   return (
