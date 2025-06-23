@@ -2,23 +2,11 @@ import React from 'react';
 import styled from 'styled-components/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
+import { accountData } from '../src/userAccountData'; // ✅ 외부 데이터 임포트
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'> & {
   setIsLoggedIn: (value: boolean) => void;
 };
-
-type Account = {
-  id: string;
-  name: string;
-  balance: number;
-};
-
-const mockAccounts: Account[] = [
-  { id: '1', name: '토스뱅크 통장', balance: 0 },
-  { id: '2', name: '저축예금', balance: 1927132 },
-  { id: '3', name: 'IBK 간편한통장', balance: 102818 },
-  { id: '4', name: '쓸모없는 통장', balance: 58 },
-];
 
 const Container = styled.SafeAreaView`
   flex: 1;
@@ -77,8 +65,16 @@ const SendText = styled.Text`
   font-weight: bold;
 `;
 
+
 export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
   const handleLogout = () => setIsLoggedIn(false);
+
+  // ✅ accountData 객체를 배열로 변환
+  const accounts = Object.entries(accountData).map(([id, data]) => ({
+    id,
+    name: data.name,
+    balance: data.balance,
+  }));
 
   return (
     <Container>
@@ -88,7 +84,7 @@ export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
         </LogoutButton>
       </TopBar>
 
-      {mockAccounts.map((account) => (
+      {accounts.map((account) => (
         <AccountCard key={account.id}>
           <AccountName>{account.name}</AccountName>
           <Balance>{account.balance.toLocaleString()}원</Balance>

@@ -14,10 +14,10 @@ type AccountInfo = {
 };
 
 const accountData: Record<string, AccountInfo> = {
-  '1': { name: '토스뱅크 통장', number: '1000123456789', balance: 0 },
-  '2': { name: '저축예금', number: '1028374650912', balance: 1927132 },
-  '3': { name: 'IBK 간편한통장', number: '1234567890123', balance: 102818 },
-  '4': { name: '쏠편한 입출금통장', number: '9876543210987', balance: 58 },
+  '1': { name: 'Finguard 통장', number: '1000123456789', balance: 0 },
+  '2': { name: '우리은행', number: '1028374650912', balance: 1927132 },
+  '3': { name: 'IBK 통장', number: '1234567890123', balance: 102818 },
+  '4': { name: '입출금통장', number: '9876543210987', balance: 58 },
 };
 
 const Container = styled.ScrollView`
@@ -145,7 +145,7 @@ export default function AccountDetailScreen() {
         <ActionButton>
           <ActionText>채우기</ActionText>
         </ActionButton>
-        <ActionButton>
+        <ActionButton onPress={() => navigation.navigate('SendMoney', { fromAccountId: accountId })}>
           <ActionText>보내기</ActionText>
         </ActionButton>
       </TransactionRow>

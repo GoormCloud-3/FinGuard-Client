@@ -9,11 +9,9 @@ import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import HomeScreen from './screens/HomeScreen';
 import AccountDetailScreen from './screens/AccountDetailScreen';
+import SendMoneyScreen from './screens/SendMoneyScreen';
+import EnterAmountScreen from './screens/EnterAmountScreen';
 import { RootStackParamList } from './types';
-
-
-
-
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -37,6 +35,8 @@ export default function App() {
               {(props) => <HomeScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
             </Stack.Screen>
             <Stack.Screen name="AccountDetail" component={AccountDetailScreen} />
+            <Stack.Screen name="SendMoney" component={SendMoneyScreen} />
+            <Stack.Screen name="EnterAmount" component={EnterAmountScreen} />
           </>
         )}
       </Stack.Navigator>
