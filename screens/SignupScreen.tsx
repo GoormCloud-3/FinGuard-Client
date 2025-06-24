@@ -5,10 +5,11 @@ import { useNavigation } from '@react-navigation/native';
 import { signUp } from '../src/cognito';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../types';
+import { KAKAO_API_KEY } from '@env';
 
 // 위도/경도 계산 함수
 const getCoordinatesFromAddress = async (address: string) => {
-  const kakaoApiKey = 'ac5e090b1a0ac086dad0202b329adfd4'; // REST API 키를 넣거나 .env로 분리
+  const kakaoApiKey = KAKAO_API_KEY // REST API 키를 넣거나 .env로 
 
   const response = await fetch(
     `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}`,
