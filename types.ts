@@ -4,6 +4,16 @@ export type RootStackParamList = {
   Signup: undefined;
   SetAccountPin: undefined;
   Home: undefined;
+  RegisterPin: {
+    id: string;
+    password: string;
+    name: string;
+    email: string;
+    birthdate: string;
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
   AccountDetail: { accountId: string} ;
   SendMoney: { fromAccountId: string };
   EnterAmount: { fromAccountId: string; toAccountId: string };
@@ -16,11 +26,19 @@ export type RootStackParamList = {
 // 로그인 및 회원가입에 필요한 타입 정의
 export type AuthStackParamList = {
   Welcome: undefined;
-  Login: undefined;
+  Login: undefined; // 👈 추가됨
   Signup: undefined;
-  SetAccountPin: undefined; // ← 새로 추가
-}; 
-
+  RegisterPin: {
+    id: string;
+    password: string;
+    name: string;
+    email: string;
+    birthdate: string;
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+};
 
 
 export type SignUpParams = {
