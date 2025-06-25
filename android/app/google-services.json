@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1047183839606",
+    "project_id": "fraud-detector-99f4e",
+    "storage_bucket": "fraud-detector-99f4e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1047183839606:android:b9868c3bc04d1720beea57",
+        "android_client_info": {
+          "package_name": "com.finguard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF29GIvrQzso9NvikAsevLikvzPFDpeAU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
