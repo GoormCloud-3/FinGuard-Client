@@ -12,6 +12,7 @@
   "dependencies": {
     "@aws-amplify/auth": "^6.13.1",
     "@aws-amplify/react-native": "^1.1.10",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/geolocation": "^3.4.0",
     "@react-native-firebase/app": "^22.2.1",
@@ -27,6 +28,7 @@
     "react-native-dotenv": "^3.4.11",
     "react-native-geolocation-service": "^5.3.1",
     "react-native-gesture-handler": "^2.26.0",
+    "react-native-permissions": "^5.4.1",
     "react-native-safe-area-context": "^5.4.1",
     "react-native-screens": "^4.11.1",
     "styled-components": "^6.1.19"
