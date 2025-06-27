@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { accountData } from '../src/userAccountData'; // ✅ 외부 데이터 임포트
+import { accountData } from '../src/userAccountData';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'> & {
   setIsLoggedIn: (value: boolean) => void;
@@ -65,11 +65,23 @@ const SendText = styled.Text`
   font-weight: bold;
 `;
 
+const AddAccountButton = styled.TouchableOpacity`
+  margin-top: 24px;
+  padding: 14px;
+  background-color: #00c471;
+  border-radius: 10px;
+  align-items: center;
+`;
+
+const AddAccountText = styled.Text`
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+`;
 
 export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
   const handleLogout = () => setIsLoggedIn(false);
 
-  // ✅ accountData 객체를 배열로 변환
   const accounts = Object.entries(accountData).map(([id, data]) => ({
     id,
     name: data.name,
@@ -93,6 +105,11 @@ export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
           </SendButton>
         </AccountCard>
       ))}
+
+      {/* ✅ 통장 생성 버튼 */}
+      <AddAccountButton onPress={() => navigation.navigate('CreateAccount')}>
+        <AddAccountText>＋ 새 통장 만들기</AddAccountText>
+      </AddAccountButton>
     </Container>
   );
 }

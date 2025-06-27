@@ -17,6 +17,7 @@ export type RootStackParamList = {
   AccountDetail: { accountId: string} ;
   SendMoney: { fromAccountId: string };
   EnterAmount: { fromAccountId: string; toAccountId: string };
+  CreateAccount: undefined;
 };
 
 //  화면 이름과 그에 전달할 데이터 타입을 정의해둔 파일
