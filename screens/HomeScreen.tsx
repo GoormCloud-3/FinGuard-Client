@@ -1,13 +1,69 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { accountData } from '../src/userAccountData';
+import PinCheckModal from '../components/PinCheckModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'> & {
   setIsLoggedIn: (value: boolean) => void;
 };
 
+export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [pinModalVisible, setPinModalVisible] = useState(false);
+
+  const handleLogout = () => setIsLoggedIn(false);
+
+  const accounts = Object.entries(accountData).map(([id, data]) => ({
+    id,
+    name: data.name,
+    balance: data.balance,
+  }));
+
+  const handlePressSend = (accountId: string) => {
+    setSelectedAccountId(accountId);
+    setPinModalVisible(true);
+  };
+
+  const handlePinSuccess = () => {
+    if (selectedAccountId) {
+      navigation.navigate('AccountDetail', { accountId: selectedAccountId });
+    }
+  };
+
+  return (
+    <Container>
+      <TopBar>
+        <LogoutButton onPress={handleLogout}>
+          <LogoutText>로그아웃</LogoutText>
+        </LogoutButton>
+      </TopBar>
+
+      {accounts.map((account) => (
+        <AccountCard key={account.id}>
+          <AccountName>{account.name}</AccountName>
+          <Balance>{account.balance.toLocaleString()}원</Balance>
+          <SendButton onPress={() => handlePressSend(account.id)}>
+            <SendText>송금</SendText>
+          </SendButton>
+        </AccountCard>
+      ))}
+
+      <AddAccountButton onPress={() => navigation.navigate('CreateAccount')}>
+        <AddAccountText>＋ 새 통장 만들기</AddAccountText>
+      </AddAccountButton>
+
+      <PinCheckModal
+        visible={pinModalVisible}
+        onClose={() => setPinModalVisible(false)}
+        onSuccess={handlePinSuccess}
+      />
+    </Container>
+  );
+}
+
+// styled-components
 const Container = styled.SafeAreaView`
   flex: 1;
   background-color: #121212;
@@ -78,38 +134,3 @@ const AddAccountText = styled.Text`
   font-size: 16px;
   font-weight: bold;
 `;
-
-export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
-  const handleLogout = () => setIsLoggedIn(false);
-
-  const accounts = Object.entries(accountData).map(([id, data]) => ({
-    id,
-    name: data.name,
-    balance: data.balance,
-  }));
-
-  return (
-    <Container>
-      <TopBar>
-        <LogoutButton onPress={handleLogout}>
-          <LogoutText>로그아웃</LogoutText>
-        </LogoutButton>
-      </TopBar>
-
-      {accounts.map((account) => (
-        <AccountCard key={account.id}>
-          <AccountName>{account.name}</AccountName>
-          <Balance>{account.balance.toLocaleString()}원</Balance>
-          <SendButton onPress={() => navigation.navigate('AccountDetail', { accountId: account.id })}>
-            <SendText>송금</SendText>
-          </SendButton>
-        </AccountCard>
-      ))}
-
-      {/* ✅ 통장 생성 버튼 */}
-      <AddAccountButton onPress={() => navigation.navigate('CreateAccount')}>
-        <AddAccountText>＋ 새 통장 만들기</AddAccountText>
-      </AddAccountButton>
-    </Container>
-  );
-}

@@ -77,3 +77,8 @@ export function signIn(id: string, password: string): Promise<void> {
     });
   });
 }
+
+export function getCurrentUser(): CognitoUser | null {
+  return userPool.getCurrentUser();
+}
+
