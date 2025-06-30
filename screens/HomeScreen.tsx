@@ -1,25 +1,42 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { accountData } from '../src/userAccountData';
 import PinCheckModal from '../components/PinCheckModal';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'> & {
   setIsLoggedIn: (value: boolean) => void;
 };
 
+type Account = {
+  id: string;
+  name: string;
+  balance: number;
+};
+
 export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [pinModalVisible, setPinModalVisible] = useState(false);
 
-  const handleLogout = () => setIsLoggedIn(false);
+  const API_URL = 'http://10.0.2.2:4000/accounts'; // ✅ Android 에뮬레이터 기준
 
-  const accounts = Object.entries(accountData).map(([id, data]) => ({
-    id,
-    name: data.name,
-    balance: data.balance,
-  }));
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('계좌 목록 조회 실패');
+        const data = await response.json();
+        setAccounts(data);
+      } catch (error) {
+        console.error('❌ 계좌 API 오류:', error);
+      }
+    };
+
+    fetchAccounts();
+  }, []);
+
+  const handleLogout = () => setIsLoggedIn(false);
 
   const handlePressSend = (accountId: string) => {
     setSelectedAccountId(accountId);
@@ -63,7 +80,7 @@ export default function HomeScreen({ navigation, setIsLoggedIn }: Props) {
   );
 }
 
-// styled-components
+// ===== styled-components =====
 const Container = styled.SafeAreaView`
   flex: 1;
   background-color: #121212;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components/native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,27 +22,45 @@ type Transaction = {
   isAnomaly?: boolean;
 };
 
-const accountData: Record<string, AccountInfo> = {
-  '1': { name: 'Finguard 통장', number: '1000123456789', balance: 1234567 },
-  '2': { name: '우리은행', number: '1028374650912', balance: 180000 },
-  '3': { name: 'IBK 통장', number: '1234567890123', balance: 102345 },
-  '4': { name: '입출금통장', number: '9876543210987', balance: 50 },
-};
-
-// ✨ 예시 거래 내역 (정상/이상 구분)
-const transactions: Transaction[] = [
-  { id: 't1', title: 'Finguard 캐시백', time: '10:56', amount: 745 },
-  { id: 't2', title: '서울 송금', time: '12:30', amount: -100000, isAnomaly: true },
-  { id: 't3', title: '편의점 결제', time: '15:40', amount: -4200 },
-];
-
 export default function AccountDetailScreen() {
   const navigation = useNavigation<AccountDetailNavigationProp>();
   const route = useRoute<AccountDetailRouteProp>();
   const { accountId } = route.params;
 
+  const [account, setAccount] = useState<AccountInfo | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pinModalVisible, setPinModalVisible] = useState(false);
-  const account = accountData[accountId];
+
+  const API_BASE = 'http://10.0.2.2:4000'; // Android 에뮬레이터 기준
+
+  useEffect(() => {
+    // 계좌 정보 가져오기
+    const fetchAccount = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/accounts/${accountId}`);
+        if (!res.ok) throw new Error('계좌 정보 오류');
+        const data = await res.json();
+        setAccount(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    // 거래 내역 가져오기
+    const fetchTransactions = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/transactions?accountId=${accountId}`);
+        if (!res.ok) throw new Error('거래 내역 오류');
+        const data = await res.json();
+        setTransactions(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    fetchAccount();
+    fetchTransactions();
+  }, [accountId]);
 
   const handleSend = () => setPinModalVisible(true);
   const handlePinSuccess = () => navigation.navigate('SendMoney', { fromAccountId: accountId });
@@ -79,7 +97,6 @@ export default function AccountDetailScreen() {
         <Balance>{account.balance.toLocaleString()}원</Balance>
       </AccountInfoBox>
 
-      {/* ✅ 정상 거래 목록 */}
       <SectionTitle>📋 정상 거래</SectionTitle>
       {normalTx.map(tx => (
         <Transaction key={tx.id}>
@@ -94,7 +111,6 @@ export default function AccountDetailScreen() {
         </Transaction>
       ))}
 
-      {/* ✅ 이상 거래 목록 */}
       <SectionTitle>🚨 이상 거래</SectionTitle>
       {anomalyTx.length > 0 ? (
         anomalyTx.map(tx => (
@@ -113,7 +129,6 @@ export default function AccountDetailScreen() {
         <Label style={{ color: '#666', marginBottom: 16 }}>이상 거래 없음</Label>
       )}
 
-      {/* 하단 버튼 */}
       <TransactionRow style={{ marginTop: 40 }}>
         <ActionButton>
           <ActionText>채우기</ActionText>
@@ -123,7 +138,6 @@ export default function AccountDetailScreen() {
         </ActionButton>
       </TransactionRow>
 
-      {/* 2차 비밀번호 모달 */}
       <PinCheckModal
         visible={pinModalVisible}
         onClose={() => setPinModalVisible(false)}
@@ -132,7 +146,6 @@ export default function AccountDetailScreen() {
     </Container>
   );
 }
-
 // ===== styled-components =====
 const Container = styled.ScrollView`
   flex: 1;
