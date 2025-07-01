@@ -23,7 +23,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
 
   const { min, max, label } = bankConfig[bank];
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim() || !accountNumber.trim() || !initialBalance.trim()) {
       Alert.alert('모든 필드를 입력해주세요.');
       return;
@@ -44,19 +44,34 @@ export default function CreateAccountScreen({ navigation }: Props) {
       return;
     }
 
-    console.log('통장 생성 요청:', {
-      bank,
+    const newAccount = {
+      id: Date.now().toString(), // 고유 ID 생성
       name,
-      accountNumber,
+      number: accountNumber,
       balance: Number(initialBalance),
-    });
+    };
 
-    Alert.alert('통장이 생성되었습니다!', '', [
-      {
-        text: '확인',
-        onPress: () => navigation.navigate('Home'), // ✅ HomeScreen으로 이동
-      },
-    ]);
+    try {
+      const res = await fetch('http://10.0.2.2:4000/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAccount),
+      });
+
+      if (!res.ok) {
+        throw new Error('통장 생성 실패');
+      }
+
+      Alert.alert('통장이 생성되었습니다!', '', [
+        {
+          text: '확인',
+          onPress: () => navigation.navigate('Home'),
+        },
+      ]);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('에러', '통장 생성 중 문제가 발생했습니다.');
+    }
   };
 
   return (
