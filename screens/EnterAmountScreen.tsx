@@ -1,15 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Alert } from 'react-native';
-
 import { RootStackParamList } from '../types';
-import { accountData as bankAccounts } from '../src/accountData';
-import { accountData as userAccounts } from '../src/userAccountData';
-import { getCurrentUserLocation } from '../src/getUserLocation';
-import { useCurrentLocation } from '../src/useCurrentLocation';
-import { getDistanceFromLatLonInKm } from '../src/location';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
 type RouteProps = RouteProp<RootStackParamList, 'EnterAmount'>;
@@ -19,50 +13,95 @@ export default function EnterAmountScreen() {
   const route = useRoute<RouteProps>();
   const { fromAccountId, toAccountId } = route.params;
 
-  const fromAccount = userAccounts[fromAccountId as keyof typeof userAccounts];
-  const toAccount = bankAccounts[toAccountId as keyof typeof bankAccounts];
-
+  const API = 'http://10.0.2.2:4000';
+  const [fromAccount, setFromAccount] = useState<any>(null);
+  const [toAccount, setToAccount] = useState<any>(null);
   const [amount, setAmount] = useState('');
-  const [userLat, setUserLat] = useState<number | null>(null);
-  const [userLon, setUserLon] = useState<number | null>(null);
-  const location = useCurrentLocation();
 
-  // 사용자 등록된 위도/경도 불러오기
   useEffect(() => {
-    const fetch = async () => {
-      const userLocation = await getCurrentUserLocation();
-      if (userLocation) {
-        setUserLat(userLocation.latitude);
-        setUserLon(userLocation.longitude);
+    const fetchAccounts = async () => {
+      try {
+        const fromRes = await fetch(`${API}/accounts/${fromAccountId}`);
+        const toRes = await fetch(`${API}/accounts/${toAccountId}`);
+        const fromData = await fromRes.json();
+        const toData = await toRes.json();
+        setFromAccount(fromData);
+        setToAccount(toData);
+      } catch (err) {
+        console.error(err);
+        Alert.alert('계좌 정보 오류', '계좌 정보를 불러올 수 없습니다.');
       }
     };
-    fetch();
-  }, []);
 
-  // 키패드 입력 처리
+    fetchAccounts();
+  }, [fromAccountId, toAccountId, navigation]);
+
   const handleKeyPress = (key: string) => {
     if (key === '←') {
       setAmount((prev) => prev.slice(0, -1));
     } else {
       const next = amount + key;
-      const nextAmount = Number(next);
+      const numeric = Number(next.replace(/,/g, ''));
 
-      if (nextAmount > fromAccount.balance) {
-        Alert.alert('잔액 부족', '잔액이 부족합니다.');
+      if (fromAccount && numeric > fromAccount.balance) {
+        Alert.alert('잔액이 부족합니다.');
         setAmount('');
         return;
       }
 
-      if (userLat !== null && userLon !== null && location) {
-        const distance = getDistanceFromLatLonInKm(userLat, userLon, location.latitude, location.longitude);
-        if (distance > 3) {
-          Alert.alert('이상 거래 감지', '현재 위치가 등록된 위치와 너무 멀리 떨어져 있습니다.');
-          setAmount('');
-          return;
-        }
-      }
-
       setAmount(next);
+    }
+  };
+
+  const handleSend = async () => {
+    const numericAmount = Number(amount);
+    if (!numericAmount || numericAmount <= 0) {
+      Alert.alert('금액을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await fetch(`${API}/accounts/${fromAccountId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: fromAccount.balance - numericAmount }),
+      });
+
+      await fetch(`${API}/accounts/${toAccountId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: toAccount.balance + numericAmount }),
+      });
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      await fetch(`${API}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: fromAccountId,
+          title: `${toAccount.name} 송금`,
+          time,
+          amount: -numericAmount,
+        }),
+      });
+
+      await fetch(`${API}/transactions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountId: toAccountId,
+          title: `${fromAccount.name} 입금`,
+          time,
+          amount: numericAmount,
+        }),
+      });
+
+      Alert.alert('송금 완료', `${numericAmount.toLocaleString()}원을 송금했습니다.`);
+      navigation.navigate('Home');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('오류', '송금 중 문제가 발생했습니다.');
     }
   };
 
@@ -74,31 +113,35 @@ export default function EnterAmountScreen() {
         </BackButton>
       </Header>
 
-      {/* 출금 계좌 정보 */}
-      <Title>{fromAccount?.name} 계좌에서</Title>
-      <BalanceText>잔액 {fromAccount?.balance.toLocaleString()}원</BalanceText>
+      {fromAccount && toAccount && (
+        <>
+          <Title>{fromAccount.name} 계좌에서</Title>
+          <BalanceText>잔액 {fromAccount.balance.toLocaleString()}원</BalanceText>
 
-      {/* 입금 계좌 정보 */}
-      <SubTitle>{toAccount?.name} 계좌로</SubTitle>
-      <AccountNumber>{toAccount?.number}</AccountNumber>
+          <SubTitle>{toAccount.name} 계좌로</SubTitle>
+          <AccountNumber>{toAccount.number}</AccountNumber>
 
-      {/* 금액 입력 */}
-      <Prompt>{amount ? '보낼 금액' : '얼마나 보낼까요?'}</Prompt>
-      <AmountBox>₩ {Number(amount || '0').toLocaleString()}</AmountBox>
+          <Prompt>{amount ? '보낼 금액' : '얼마나 보낼까요?'}</Prompt>
+          <AmountBox>₩ {Number(amount || '0').toLocaleString()}</AmountBox>
 
-      {/* 숫자 키패드 */}
-      <KeypadContainer>
-        {['1','2','3','4','5','6','7','8','9','00','0','←'].map((key) => (
-          <KeypadButton key={key} onPress={() => handleKeyPress(key)}>
-            <KeypadText>{key}</KeypadText>
-          </KeypadButton>
-        ))}
-      </KeypadContainer>
+          <KeypadContainer>
+            {['1','2','3','4','5','6','7','8','9','00','0','←'].map((key) => (
+              <KeypadButton key={key} onPress={() => handleKeyPress(key)}>
+                <KeypadText>{key}</KeypadText>
+              </KeypadButton>
+            ))}
+          </KeypadContainer>
+
+          <SendButton onPress={handleSend}>
+            <SendButtonText>송금</SendButtonText>
+          </SendButton>
+        </>
+      )}
     </Container>
   );
 }
 
-// 스타일 컴포넌트
+// ===== 스타일 컴포넌트 =====
 const Container = styled.ScrollView`
   flex: 1;
   background-color: #121212;
@@ -178,4 +221,18 @@ const KeypadButton = styled.TouchableOpacity`
 const KeypadText = styled.Text`
   color: #ffffff;
   font-size: 26px;
+`;
+
+const SendButton = styled.TouchableOpacity`
+  margin-top: 24px;
+  background-color: #007aff;
+  padding: 18px;
+  border-radius: 12px;
+  align-items: center;
+`;
+
+const SendButtonText = styled.Text`
+  color: #fff;
+  font-size: 18px;
+  font-weight: bold;
 `;

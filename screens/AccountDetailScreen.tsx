@@ -31,31 +31,19 @@ export default function AccountDetailScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pinModalVisible, setPinModalVisible] = useState(false);
 
-  const API_BASE = 'http://10.0.2.2:4000'; // Android 에뮬레이터 기준
+  const API_BASE = 'http://10.0.2.2:4000';
 
   useEffect(() => {
-    // 계좌 정보 가져오기
     const fetchAccount = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/accounts/${accountId}`);
-        if (!res.ok) throw new Error('계좌 정보 오류');
-        const data = await res.json();
-        setAccount(data);
-      } catch (e) {
-        console.error(e);
-      }
+      const res = await fetch(`${API_BASE}/accounts/${accountId}`);
+      const data = await res.json();
+      setAccount(data);
     };
 
-    // 거래 내역 가져오기
     const fetchTransactions = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/transactions?accountId=${accountId}`);
-        if (!res.ok) throw new Error('거래 내역 오류');
-        const data = await res.json();
-        setTransactions(data);
-      } catch (e) {
-        console.error(e);
-      }
+      const res = await fetch(`${API_BASE}/transactions?accountId=${accountId}`);
+      const data = await res.json();
+      setTransactions(data);
     };
 
     fetchAccount();
@@ -63,7 +51,14 @@ export default function AccountDetailScreen() {
   }, [accountId]);
 
   const handleSend = () => setPinModalVisible(true);
-  const handlePinSuccess = () => navigation.navigate('SendMoney', { fromAccountId: accountId });
+
+  const handlePinSuccess = () => {
+    const toAccountId = '2'; // 예시로 우리은행 계좌로 송금
+    navigation.navigate('EnterAmount', {
+      fromAccountId: accountId,
+      toAccountId,
+    });
+  };
 
   if (!account) {
     return (
@@ -79,15 +74,7 @@ export default function AccountDetailScreen() {
   return (
     <Container>
       <Header>
-        <BackButton
-          onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              navigation.navigate('Home');
-            }
-          }}
-        >
+        <BackButton onPress={() => navigation.goBack()}>
           <BackText>←</BackText>
         </BackButton>
       </Header>
@@ -146,6 +133,7 @@ export default function AccountDetailScreen() {
     </Container>
   );
 }
+
 // ===== styled-components =====
 const Container = styled.ScrollView`
   flex: 1;
