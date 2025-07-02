@@ -4,6 +4,7 @@ import styled from 'styled-components/native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
+import { useCurrentLocation } from '../src/useCurrentLocation';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
 type RouteProps = RouteProp<RootStackParamList, 'EnterAmount'>;
@@ -17,16 +18,15 @@ export default function EnterAmountScreen() {
   const [fromAccount, setFromAccount] = useState<any>(null);
   const [toAccount, setToAccount] = useState<any>(null);
   const [amount, setAmount] = useState('');
+  const location = useCurrentLocation();
 
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
         const fromRes = await fetch(`${API}/accounts/${fromAccountId}`);
         const toRes = await fetch(`${API}/accounts/${toAccountId}`);
-        const fromData = await fromRes.json();
-        const toData = await toRes.json();
-        setFromAccount(fromData);
-        setToAccount(toData);
+        setFromAccount(await fromRes.json());
+        setToAccount(await toRes.json());
       } catch (err) {
         console.error(err);
         Alert.alert('계좌 정보 오류', '계좌 정보를 불러올 수 없습니다.');
@@ -61,6 +61,7 @@ export default function EnterAmountScreen() {
     }
 
     try {
+      // 잔액 업데이트
       await fetch(`${API}/accounts/${fromAccountId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -73,29 +74,48 @@ export default function EnterAmountScreen() {
         body: JSON.stringify({ balance: toAccount.balance + numericAmount }),
       });
 
+      // 거래 내역 추가
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+      const sendTx = {
+        accountId: fromAccountId,
+        title: `${toAccount.name} 송금`,
+        time,
+        amount: -numericAmount,
+      };
+
+      const receiveTx = {
+        accountId: toAccountId,
+        title: `${fromAccount.name} 입금`,
+        time,
+        amount: numericAmount,
+      };
+
       await fetch(`${API}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accountId: fromAccountId,
-          title: `${toAccount.name} 송금`,
-          time,
-          amount: -numericAmount,
-        }),
+        body: JSON.stringify(sendTx),
       });
 
       await fetch(`${API}/transactions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accountId: toAccountId,
-          title: `${fromAccount.name} 입금`,
-          time,
-          amount: numericAmount,
-        }),
+        body: JSON.stringify(receiveTx),
       });
+
+      // 7️⃣ SQS 등록용 API 호출 (이상 거래 테스트)
+      if (location) {
+        await fetch(`${API}/anomaly-sqs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            transactionId: `tx-${Date.now()}`, // 테스트용 고유 ID
+            toAccountId,
+            location,
+            userId: 'user-1234', // 예시 사용자 ID
+          }),
+        });
+      }
 
       Alert.alert('송금 완료', `${numericAmount.toLocaleString()}원을 송금했습니다.`);
       navigation.navigate('Home');
@@ -140,7 +160,6 @@ export default function EnterAmountScreen() {
     </Container>
   );
 }
-
 // ===== 스타일 컴포넌트 =====
 const Container = styled.ScrollView`
   flex: 1;
