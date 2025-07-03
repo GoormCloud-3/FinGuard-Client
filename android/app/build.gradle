@@ -1,12 +1,13 @@
+/* android/app/build.gradle */
+
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: "com.google.gms.google-services"
 
-/* React-Native Gradle Plugin */
+/* RN 플러그인 */
 react { autolinkLibrariesWithApp() }
 
-/* ───────── 공통 설정 ───────── */
 def enableProguardInReleaseBuilds = false
 def jscFlavor = "io.github.react-native-community:jsc-android:2026004.+"
 
@@ -41,33 +42,31 @@ android {
     }
 }
 
-/* ───────── 의존성 ───────── */
 dependencies {
-    /* React-Native 프레임워크 */
-    implementation("com.facebook.react:react-android")
+    implementation "com.facebook.react:react-android"
 
-    /* Google Play-services ─ 위치 모듈만 20.x 로 고정 (RN Geolocation 5.3.x 호환) */
-    implementation("com.google.android.gms:play-services-location:20.0.0")
+    /* ★ 모든 Play-Services 모듈 21.0.1 로 고정 */
+    implementation "com.google.android.gms:play-services-base:18.4.0"
+    implementation "com.google.android.gms:play-services-tasks:18.0.2"
+    implementation "com.google.android.gms:play-services-location:21.0.1"
 
-    /* Firebase – BoM 사용 권장 (필요 모듈 버전을 일관성 있게) */
-    implementation(platform("com.google.firebase:firebase-bom:33.14.0"))
-    implementation("com.google.firebase:firebase-messaging")   // FCM
+    /* Firebase Cloud Messaging */
+    implementation "com.google.firebase:firebase-messaging:23.4.0"
 
-    /* JavaScript 엔진 */
     if (hermesEnabled.toBoolean()) {
-        implementation("com.facebook.react:hermes-android")
+        implementation "com.facebook.react:hermes-android"
     } else {
-        implementation(jscFlavor)
+        implementation jscFlavor
     }
 }
 
-/* ───────── 버전 충돌 방지 ─────────
-   다른 라이브러리가 play-services-location 21.x를 끌어올라도
-   20.0.0 으로 덮어쓰도록 강제  */
+/* 전역 해상도 전략 – Play-Services 21.0.1 통일 */
 subprojects {
     configurations.all {
         resolutionStrategy {
-            force "com.google.android.gms:play-services-location:20.0.0"
+            force "com.google.android.gms:play-services-base:18.4.0"
+            force "com.google.android.gms:play-services-tasks:18.0.2"
+            force "com.google.android.gms:play-services-location:21.0.1"
         }
     }
 }
