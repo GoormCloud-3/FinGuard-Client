@@ -1,257 +1,228 @@
-import React, { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import styled from 'styled-components/native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { useCurrentLocation } from '../src/useCurrentLocation';
+import {
+  useNavigation,
+  useRoute,
+  RouteProp,
+} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
-type RouteProps = RouteProp<RootStackParamList, 'EnterAmount'>;
+import {RootStackParamList} from '../types';
+import { getCurrentLocation } from '../src/useCurrentLocation';
+
+/* ───── 네비게이션/타입 ───── */
+type Nav = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
+type Rt  = RouteProp<RootStackParamList, 'EnterAmount'>;
+
+type Account = {
+  accountId    : string;
+  accountName  : string;
+  accountNumber: string;
+  bankName     : string;
+  balance      : number;
+};
 
 export default function EnterAmountScreen() {
-  const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProps>();
-  const { fromAccountId, toAccountId } = route.params;
+  const navigation = useNavigation<Nav>();
+  const {
+    params: {fromAccountId},
+  } = useRoute<Rt>();
 
-  const API = 'http://10.0.2.2:4000';
-  const [fromAccount, setFromAccount] = useState<any>(null);
-  const [toAccount, setToAccount] = useState<any>(null);
-  const [amount, setAmount] = useState('');
-  const location = useCurrentLocation();
+  /* ───── 상태 ───── */
+  const [fromAcc, setFromAcc] = useState<Account | null>(null);
+  const [counter, setCounter] = useState(''); // 상대 계좌번호
+  const [amount , setAmount ] = useState(''); // 키패드 입력 금액
 
+  /* ───── 내 통장 조회 ───── */
   useEffect(() => {
-    const fetchAccounts = async () => {
+    (async () => {
       try {
-        const fromRes = await fetch(`${API}/accounts/${fromAccountId}`);
-        const toRes = await fetch(`${API}/accounts/${toAccountId}`);
-        setFromAccount(await fromRes.json());
-        setToAccount(await toRes.json());
-      } catch (err) {
-        console.error(err);
-        Alert.alert('계좌 정보 오류', '계좌 정보를 불러올 수 없습니다.');
+        const res = await fetch(
+          `https://esuc0zdtv4.execute-api.ap-northeast-2.amazonaws.com/accounts/${fromAccountId}`,
+        );
+        if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+        setFromAcc(await res.json());
+      } catch (e: any) {
+        console.error(e);
+        Alert.alert('계좌 조회 실패', e?.message ?? '오류가 발생했습니다.');
       }
-    };
+    })();
+  }, [fromAccountId]);
 
-    fetchAccounts();
-  }, [fromAccountId, toAccountId, navigation]);
-
-  const handleKeyPress = (key: string) => {
-    if (key === '←') {
-      setAmount((prev) => prev.slice(0, -1));
-    } else {
-      const next = amount + key;
-      const numeric = Number(next.replace(/,/g, ''));
-
-      if (fromAccount && numeric > fromAccount.balance) {
-        Alert.alert('잔액이 부족합니다.');
-        setAmount('');
-        return;
-      }
-
-      setAmount(next);
+  /* ───── 키패드 입력 ───── */
+  const onKey = (k: string) => {
+    if (k === '←') {
+      setAmount(prev => prev.slice(0, -1));
+      return;
     }
+    const next   = amount + k;
+    const numeric = Number(next.replace(/,/g, ''));
+
+    if (fromAcc && numeric > fromAcc.balance) {
+      Alert.alert('잔액이 부족합니다.');
+      return;
+    }
+    setAmount(next);
   };
 
+  /* ───── 송금 실행 ───── */
   const handleSend = async () => {
-    const numericAmount = Number(amount);
-    if (!numericAmount || numericAmount <= 0) {
-      Alert.alert('금액을 입력해주세요.');
+    const money = Number(amount);
+    if (!counter.trim())     { Alert.alert('상대 계좌번호를 입력하세요.'); return; }
+    if (!money || money <= 0){ Alert.alert('금액을 입력하세요.');         return; }
+    if (!fromAcc)            { Alert.alert('계좌 정보를 불러오지 못했습니다.'); return; }
+
+    /* 1) 위치를 **즉시** 조회 */
+    const location = await getCurrentLocation();
+    if (!location) {
+      Alert.alert('위치 실패', '현재 위치를 가져오지 못했습니다.');
       return;
     }
 
     try {
-      // 잔액 업데이트
-      await fetch(`${API}/accounts/${fromAccountId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ balance: fromAccount.balance - numericAmount }),
-      });
+      /* 2) userSub 가져오기 */
+      const userSub = await AsyncStorage.getItem('@userSub');
+      if (!userSub) throw new Error('userSub 불러오기 실패');
 
-      await fetch(`${API}/accounts/${toAccountId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ balance: toAccount.balance + numericAmount }),
-      });
-
-      // 거래 내역 추가
-      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const sendTx = {
-        accountId: fromAccountId,
-        title: `${toAccount.name} 송금`,
-        time,
-        amount: -numericAmount,
+      /* 3) 서버 전송 */
+      const payload = {
+        userSub,
+        my_account      : fromAcc.accountNumber,
+        counter_account : counter,
+        money,
+        used_card       : 1,
+        description     : '출금',
+        location        : [location.latitude, location.longitude],
       };
 
-      const receiveTx = {
-        accountId: toAccountId,
-        title: `${fromAccount.name} 입금`,
-        time,
-        amount: numericAmount,
-      };
+      const res = await fetch(
+        'https://esuc0zdtv4.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
+        {
+          method : 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body   : JSON.stringify(payload),
+        },
+      );
+      if (!res.ok) throw new Error(`전송 실패: ${res.status}`);
 
-      await fetch(`${API}/transactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sendTx),
-      });
-
-      await fetch(`${API}/transactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(receiveTx),
-      });
-
-      // 7️⃣ SQS 등록용 API 호출 (이상 거래 테스트)
-      if (location) {
-        await fetch(`${API}/anomaly-sqs`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transactionId: `tx-${Date.now()}`, // 테스트용 고유 ID
-            toAccountId,
-            location,
-            userId: 'user-1234', // 예시 사용자 ID
-          }),
-        });
-      }
-
-      Alert.alert('송금 완료', `${numericAmount.toLocaleString()}원을 송금했습니다.`);
+      Alert.alert('송금 완료', `${money.toLocaleString()}원 송금되었습니다.`);
       navigation.navigate('Home');
-    } catch (err) {
-      console.error(err);
-      Alert.alert('오류', '송금 중 문제가 발생했습니다.');
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert('오류', e?.message ?? '송금 중 문제가 발생했습니다.');
     }
   };
 
+  /* ───── UI ───── */
   return (
-    <Container>
-      <Header>
-        <BackButton onPress={() => navigation.goBack()}>
-          <BackText>←</BackText>
-        </BackButton>
-      </Header>
+    <KeyboardAvoidingView
+      style={{flex: 1}}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={{flexGrow: 1}}
+        keyboardShouldPersistTaps="handled">
+        <Container>
+          <Header>
+            <BackBtn onPress={() => navigation.goBack()}>
+              <BackTxt>←</BackTxt>
+            </BackBtn>
+          </Header>
 
-      {fromAccount && toAccount && (
-        <>
-          <Title>{fromAccount.name} 계좌에서</Title>
-          <BalanceText>잔액 {fromAccount.balance.toLocaleString()}원</BalanceText>
+          {fromAcc && (
+            <>
+              <Title>{fromAcc.accountName} 계좌에서</Title>
+              <BalanceTxt>
+                잔액 {fromAcc.balance.toLocaleString()}원
+              </BalanceTxt>
 
-          <SubTitle>{toAccount.name} 계좌로</SubTitle>
-          <AccountNumber>{toAccount.number}</AccountNumber>
+              {/* 상대 계좌번호 입력 */}
+              <SubTitle>받는 사람 계좌번호</SubTitle>
+              <AccountInput
+                placeholder="예) 123-456-78910"
+                placeholderTextColor="#888"
+                value={counter}
+                onChangeText={setCounter}
+                keyboardType="numbers-and-punctuation"
+              />
 
-          <Prompt>{amount ? '보낼 금액' : '얼마나 보낼까요?'}</Prompt>
-          <AmountBox>₩ {Number(amount || '0').toLocaleString()}</AmountBox>
+              <Prompt>{amount ? '보낼 금액' : '얼마나 보낼까요?'}</Prompt>
+              <AmtBox>
+                ₩ {Number(amount || '0').toLocaleString()}
+              </AmtBox>
 
-          <KeypadContainer>
-            {['1','2','3','4','5','6','7','8','9','00','0','←'].map((key) => (
-              <KeypadButton key={key} onPress={() => handleKeyPress(key)}>
-                <KeypadText>{key}</KeypadText>
-              </KeypadButton>
-            ))}
-          </KeypadContainer>
+              {/* 키패드 */}
+              <Pad>
+                {['1','2','3','4','5','6','7','8','9','00','0','←'].map(k => (
+                  <PadBtn key={k} onPress={() => onKey(k)}>
+                    <PadTxt>{k}</PadTxt>
+                  </PadBtn>
+                ))}
+              </Pad>
 
-          <SendButton onPress={handleSend}>
-            <SendButtonText>송금</SendButtonText>
-          </SendButton>
-        </>
-      )}
-    </Container>
+              <SendBtn onPress={handleSend}>
+                <SendTxt>송금</SendTxt>
+              </SendBtn>
+            </>
+          )}
+        </Container>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
-// ===== 스타일 컴포넌트 =====
-const Container = styled.ScrollView`
+
+/* ───── 스타일 ───── */
+const Container = styled.View`
   flex: 1;
-  background-color: #121212;
+  background: #121212;
   padding: 24px;
 `;
-
 const Header = styled.View`
   flex-direction: row;
   align-items: center;
   margin-bottom: 24px;
 `;
+const BackBtn = styled.TouchableOpacity`padding: 12px;`;
+const BackTxt = styled.Text`color: #fff; font-size: 36px;`;
 
-const BackButton = styled.TouchableOpacity`
+const Title      = styled.Text`color: #fff; font-size: 22px; font-weight: bold;`;
+const BalanceTxt = styled.Text`color: #aaa; font-size: 14px; margin-bottom: 18px;`;
+
+const SubTitle     = styled.Text`color: #fff; font-size: 20px; margin-bottom: 4px; font-weight: bold;`;
+const AccountInput = styled.TextInput`
+  background: #1e1e1e;
+  color: #fff;
   padding: 12px;
-`;
-
-const BackText = styled.Text`
-  color: #ffffff;
-  font-size: 36px;
-`;
-
-const Title = styled.Text`
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: bold;
-  margin-bottom: 4px;
-`;
-
-const BalanceText = styled.Text`
-  color: #aaa;
-  font-size: 14px;
-  margin-bottom: 18px;
-`;
-
-const SubTitle = styled.Text`
-  color: #ffffff;
-  font-size: 20px;
-  margin-bottom: 4px;
-  font-weight: bold;
-`;
-
-const AccountNumber = styled.Text`
-  color: #ccc;
-  font-size: 14px;
+  border-radius: 10px;
   margin-bottom: 24px;
 `;
 
-const Prompt = styled.Text`
-  color: #999;
-  font-size: 18px;
-  margin-bottom: 6px;
-`;
+const Prompt = styled.Text`color: #999; font-size: 18px; margin-bottom: 6px;`;
+const AmtBox = styled.Text`color: #fff; font-size: 26px; font-weight: bold; margin-bottom: 32px;`;
 
-const AmountBox = styled.Text`
-  color: #ffffff;
-  font-size: 26px;
-  font-weight: bold;
-  margin-bottom: 32px;
-`;
-
-const KeypadContainer = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: space-between;
-`;
-
-const KeypadButton = styled.TouchableOpacity`
+const Pad = styled.View`flex-direction: row; flex-wrap: wrap; justify-content: space-between;`;
+const PadBtn = styled.TouchableOpacity`
   width: 30%;
   aspect-ratio: 1;
   justify-content: center;
   align-items: center;
   margin-bottom: 16px;
-  background-color: #1e1e1e;
+  background: #1e1e1e;
   border-radius: 12px;
 `;
+const PadTxt = styled.Text`color: #fff; font-size: 26px;`;
 
-const KeypadText = styled.Text`
-  color: #ffffff;
-  font-size: 26px;
-`;
-
-const SendButton = styled.TouchableOpacity`
+const SendBtn = styled.TouchableOpacity`
   margin-top: 24px;
-  background-color: #007aff;
+  background: #007aff;
   padding: 18px;
   border-radius: 12px;
   align-items: center;
 `;
-
-const SendButtonText = styled.Text`
-  color: #fff;
-  font-size: 18px;
-  font-weight: bold;
-`;
+const SendTxt = styled.Text`color: #fff; font-size: 18px; font-weight: bold;`;

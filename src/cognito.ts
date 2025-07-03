@@ -1,3 +1,5 @@
+/*   Cognito 래퍼 – 회원가입 / 로그인 / 현재 유저*/
+
 import {
   CognitoUserPool,
   CognitoUser,
@@ -5,26 +7,17 @@ import {
   AuthenticationDetails,
 } from 'amazon-cognito-identity-js';
 
-// 사용자 풀 정보
+/* ✅ 사용자 풀 설정 */
 const poolData = {
-  UserPoolId: 'ap-northeast-2_SNy2daNcS', // ← 본인의 User Pool ID
-  ClientId: '1p6gp10unb3v2ovm5mkslpsbuj', // ← 본인의 App Client ID
+  UserPoolId: 'ap-northeast-2_SNy2daNcS',      // your pool
+  ClientId:   '1p6gp10unb3v2ovm5mkslpsbuj',    // your client
 };
 
 export const userPool = new CognitoUserPool(poolData);
 
-// ✅ 회원가입 함수
-export function signUp({
-  id,
-  password,
-  name,
-  email,
-  birthdate,
-  address,
-  latitude,
-  longitude,
-  secondaryPin,
-}: {
+/* ── 회원가입 ──────────────────────────────── */
+/** 가입 완료 시 `userSub`(고유 id) 를 돌려준다 */
+export function signUp(params: {
   id: string;
   password: string;
   name: string;
@@ -34,51 +27,50 @@ export function signUp({
   latitude: string;
   longitude: string;
   secondaryPin: string;
-}): Promise<CognitoUser> {
-  const attributeList: CognitoUserAttribute[] = [
+}): Promise<{ user: CognitoUser; userSub: string }> {
+  const {
+    id, password, name, email,
+    birthdate, address,
+    latitude, longitude,
+    secondaryPin,
+  } = params;
+
+  const attrs: CognitoUserAttribute[] = [
     new CognitoUserAttribute({ Name: 'name', Value: name }),
     new CognitoUserAttribute({ Name: 'email', Value: email }),
     new CognitoUserAttribute({ Name: 'birthdate', Value: birthdate }),
     new CognitoUserAttribute({ Name: 'address', Value: address }),
-    new CognitoUserAttribute({ Name: 'custom:latitude', Value: latitude }),
+    new CognitoUserAttribute({ Name: 'custom:latitude',  Value: latitude }),
     new CognitoUserAttribute({ Name: 'custom:longitude', Value: longitude }),
     new CognitoUserAttribute({ Name: 'custom:secondaryPin', Value: secondaryPin }),
   ];
 
   return new Promise((resolve, reject) => {
-    userPool.signUp(id, password, attributeList, [], (err, result) => {
-      if (err || !result?.user) return reject(err);
-      return resolve(result.user);
+    userPool.signUp(id, password, attrs, [], (err, result) => {
+      if (err || !result) return reject(err);
+      resolve({ user: result.user, userSub: result.userSub });
     });
   });
 }
-// ✅ 로그인 함수
-export function signIn(id: string, password: string): Promise<void> {
+
+/* ── 로그인 ───────────────────────────────── */
+export function signIn(id: string, password: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const authDetails = new AuthenticationDetails({
-      Username: id,
-      Password: password,
-    });
+    const auth = new AuthenticationDetails({ Username: id, Password: password });
+    const user = new CognitoUser({ Username: id, Pool: userPool });
 
-    const user = new CognitoUser({
-      Username: id,
-      Pool: userPool,
-    });
-
-    user.authenticateUser(authDetails, {
-      onSuccess: (result) => {
-        console.log('✅ 로그인 성공:', result);
-        resolve(); // 또는 resolve(result) 원한다면 반환값 전달 가능
+    user.authenticateUser(auth, {
+      onSuccess: (_session, _userConfirmed) => {
+        // sub 은 idToken payload 에 들어 있음
+        const sub = _session.getIdToken().decodePayload().sub as string;
+        resolve(sub);                       // string 반환
       },
-      onFailure: (err) => {
-        console.error('❌ 로그인 실패:', err);
-        reject(err);
-      },
+      onFailure: err => reject(err),
     });
   });
 }
 
+/* ── 현재 로그인 유저 ─────────────────────── */
 export function getCurrentUser(): CognitoUser | null {
   return userPool.getCurrentUser();
 }
-

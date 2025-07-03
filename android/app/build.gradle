@@ -31,10 +31,12 @@ android {
             keyPassword 'android'
         }
     }
+
     buildTypes {
         debug   { signingConfig signingConfigs.debug }
+
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.debug            
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
                           "proguard-rules.pro"
@@ -45,12 +47,12 @@ android {
 dependencies {
     implementation "com.facebook.react:react-android"
 
-    /* ★ 모든 Play-Services 모듈 21.0.1 로 고정 */
-    implementation "com.google.android.gms:play-services-base:18.4.0"
+    /* ───── Google Play-Services (위치) 한 버전으로 통일 ───── */
+    implementation "com.google.android.gms:play-services-base:18.5.0"
     implementation "com.google.android.gms:play-services-tasks:18.0.2"
-    implementation "com.google.android.gms:play-services-location:21.0.1"
+    implementation "com.google.android.gms:play-services-location:21.2.0"
 
-    /* Firebase Cloud Messaging */
+    /* ───── Firebase ───── */
     implementation "com.google.firebase:firebase-messaging:23.4.0"
 
     if (hermesEnabled.toBoolean()) {
@@ -60,13 +62,13 @@ dependencies {
     }
 }
 
-/* 전역 해상도 전략 – Play-Services 21.0.1 통일 */
+/* ───── 모든 서브모듈에서도 같은 버전 강제 ───── */
 subprojects {
     configurations.all {
         resolutionStrategy {
-            force "com.google.android.gms:play-services-base:18.4.0"
+            force "com.google.android.gms:play-services-base:18.5.0"
             force "com.google.android.gms:play-services-tasks:18.0.2"
-            force "com.google.android.gms:play-services-location:21.0.1"
+            force "com.google.android.gms:play-services-location:21.2.0"
         }
     }
 }
