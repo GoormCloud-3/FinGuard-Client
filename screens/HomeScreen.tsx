@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+// screens/HomeScreen.tsx
+import React, { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
-
 import { RootStackParamList } from '../types';
+import { CommonActions } from '@react-navigation/native';
 
+type Nav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 type Account = {
   accountId: string;
   accountName: string;
@@ -14,17 +16,40 @@ type Account = {
   bankName: string;
   balance: number;
 };
-type Nav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const [accs, setAccs] = useState<Account[]>([]);
-  const ENDPOINT = 'https://esuc0zdtv4.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
+  const ENDPOINT =
+    'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
 
+  /* 로그아웃 */
+  const handleLogout = useCallback(() => {
+  Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+    { text: '취소', style: 'cancel' },
+    {
+      text   : '로그아웃',
+      style  : 'destructive',
+      onPress: async () => {
+        await AsyncStorage.removeItem('@userSub');
+
+        /** 🔑 루트 스택으로 완전 초기화 */
+        navigation.dispatch(
+          CommonActions.reset({
+            index : 0,
+            routes: [{ name: 'Welcome' }],  
+          }),
+        );
+      },
+    },
+  ]);
+}, [navigation]);
+
+  /* 계좌 조회 */
   useEffect(() => {
-    const fetchAccounts = async () => {
+    (async () => {
       try {
-        const sub = await AsyncStorage.getItem('USER_SUB');
+        const sub = await AsyncStorage.getItem('@userSub');
         if (!sub) throw new Error('사용자 식별자 없음');
 
         const res = await fetch(`${ENDPOINT}/${sub}`);
@@ -36,18 +61,28 @@ export default function HomeScreen() {
         console.error(e);
         Alert.alert('계좌 조회 실패', e?.message ?? '알 수 없는 오류');
       }
-    };
-    fetchAccounts();
+    })();
   }, []);
 
   return (
     <Container>
-      <Title>내 계좌</Title>
+      {/* 타이틀 + 로그아웃 */}
+      <TitleRow>
+        <Title>내 계좌</Title>
+        <LogoutBtn onPress={handleLogout}>
+          <LogoutTxt>로그아웃</LogoutTxt>
+        </LogoutBtn>
+      </TitleRow>
 
-      {accs.map(a => (
-        <Card key={a.accountId} onPress={() => navigation.navigate('AccountDetail', { accountId: a.accountId })}>
-          <BankTxt>{`${a.bankName} • ${a.accountName}`}</BankTxt>
-          <BalTxt>{a.balance.toLocaleString()}원</BalTxt>
+      {accs.map(acc => (
+        <Card
+          key={acc.accountId}
+          onPress={() =>
+            navigation.navigate('AccountDetail', { accountId: acc.accountId })
+          }
+        >
+          <BankTxt>{`${acc.bankName} • ${acc.accountName}`}</BankTxt>
+          <BalTxt>{acc.balance.toLocaleString()}원</BalTxt>
         </Card>
       ))}
 
@@ -58,18 +93,39 @@ export default function HomeScreen() {
   );
 }
 
-/* ───── 스타일 ───── */
+/* ───── styled-components ───── */
 const Container = styled.ScrollView`
   flex: 1;
   background: #121212;
   padding: 24px;
 `;
+
+/* 타이틀 + 로그아웃이 한 줄에 */
+const TitleRow = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
 const Title = styled.Text`
   color: #fff;
   font-size: 24px;
   font-weight: bold;
-  margin-bottom: 20px;
 `;
+
+/* 로그아웃 버튼 */
+const LogoutBtn = styled.TouchableOpacity`
+  padding: 6px 12px;
+  background: #ff5555;
+  border-radius: 8px;
+`;
+const LogoutTxt = styled.Text`
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+`;
+
 const Card = styled.TouchableOpacity`
   background: #1e1e1e;
   padding: 16px;
@@ -78,6 +134,7 @@ const Card = styled.TouchableOpacity`
 `;
 const BankTxt = styled.Text`color: #aaa; font-size: 14px;`;
 const BalTxt = styled.Text`color: #fff; font-size: 20px; font-weight: bold;`;
+
 const NewBtn = styled.TouchableOpacity`
   background: #007aff;
   padding: 16px;

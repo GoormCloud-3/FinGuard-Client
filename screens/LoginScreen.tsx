@@ -83,20 +83,32 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
 
   /* ───────────── 로그인 ───────────── */
   const handleLogin = async () => {
-    try {
-      const userSub = await signIn(id, pw);              // sub 반환
-      await AsyncStorage.setItem('@userSub', userSub);   // 저장
-      Alert.alert('로그인 성공', '푸시 알림 설정을 시작합니다.');
+  try {
+    /* 0. 이전 로그인 정보 정리 */
+    await AsyncStorage.removeItem('@userSub');
 
-      if (await requestNotifPermission()) {
-        if (!(await setupFCM(userSub))) return;
-      }
-      setIsLoggedIn(true);
-    } catch (e: any) {
-      Alert.alert('로그인 실패',
-                  e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.');
+    /* 1. Cognito 로그인 → sub 반환 */
+    const userSub = await signIn(id, pw);          // ← signIn 이 문자열 sub 반환
+
+    /* 2. 로컬 저장 */
+    await AsyncStorage.setItem('@userSub', userSub);
+
+    /* 3. 부가 작업 (알림 권한 + FCM 토큰 등록) */
+    Alert.alert('로그인 성공', '푸시 알림 설정을 시작합니다.');
+
+    if (await requestNotifPermission()) {
+      if (!(await setupFCM(userSub))) return;            // 실패 시 종료
     }
-  };
+
+    /* 4. 앱 상태 업데이트 */
+    setIsLoggedIn(true);
+  } catch (e: any) {
+    Alert.alert(
+      '로그인 실패',
+      e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.',
+    );
+  }
+};
 
   /* ───────────── UI ───────────── */
   return (

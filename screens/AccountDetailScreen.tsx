@@ -37,7 +37,7 @@ export default function AccountDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const ENDPOINT =
-    'https://esuc0zdtv4.execute-api.ap-northeast-2.amazonaws.com/accounts';
+    'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/accounts';
 
   /* 계좌 + 거래 조회 */
   useEffect(() => {
@@ -56,9 +56,22 @@ export default function AccountDetailScreen() {
   }, [accountId]);
 
   /* 보내기 → EnterAmount (PIN 확인 생략) */
-  const handleSend = () =>
-    navigation.navigate('EnterAmount', { fromAccountId: accountId });
+  const handleSend = () => {
+  if (!data) {
+    Alert.alert('계좌 정보를 불러오지 못했습니다.');
+    return;
+  }
 
+  navigation.navigate('EnterAmount', {
+    fromAccountId: data.accountId,
+    myAccount: {
+      accountNumber: data.accountNumber,
+      accountName  : data.accountName,
+      bankName     : data.bankName,
+      balance      : data.balance,
+    },
+  });
+};
   /* 로딩 / 오류 화면 */
   if (loading)
     return (

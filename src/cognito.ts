@@ -54,16 +54,19 @@ export function signUp(params: {
 }
 
 /* ── 로그인 ───────────────────────────────── */
-export function signIn(id: string, password: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const auth = new AuthenticationDetails({ Username: id, Password: password });
-    const user = new CognitoUser({ Username: id, Pool: userPool });
+export async function signIn(
+  id: string,
+  password: string,
+): Promise<string> {            // ✅ sub 문자열 반환
+  const user = new CognitoUser({ Username: id, Pool: userPool });
+  const authDetails = new AuthenticationDetails({ Username: id, Password: password });
 
-    user.authenticateUser(auth, {
-      onSuccess: (_session, _userConfirmed) => {
-        // sub 은 idToken payload 에 들어 있음
-        const sub = _session.getIdToken().decodePayload().sub as string;
-        resolve(sub);                       // string 반환
+  return new Promise((resolve, reject) => {
+    user.authenticateUser(authDetails, {
+      onSuccess: session => {
+        // id 토큰 payload 안에 sub 포함
+        const sub: string = session.getIdToken().payload.sub;
+        resolve(sub);
       },
       onFailure: err => reject(err),
     });

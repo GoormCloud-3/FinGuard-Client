@@ -37,7 +37,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
 
     try {
       const res = await fetch(
-        'https://esuc0zdtv4.execute-api.ap-northeast-2.amazonaws.com/financial/accounts',
+        'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/financial/accounts',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
