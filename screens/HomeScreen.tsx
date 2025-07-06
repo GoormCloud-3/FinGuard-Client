@@ -1,4 +1,3 @@
-// screens/HomeScreen.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import styled from 'styled-components/native';
@@ -6,9 +5,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../types';
-import { CommonActions } from '@react-navigation/native';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
 type Account = {
   accountId: string;
   accountName: string;
@@ -17,35 +16,34 @@ type Account = {
   balance: number;
 };
 
-export default function HomeScreen() {
+/* ✔︎ setIsLoggedIn prop 다시 받기 */
+interface Props {
+  setIsLoggedIn: (v: boolean) => void;
+}
+
+export default function HomeScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<Nav>();
   const [accs, setAccs] = useState<Account[]>([]);
   const ENDPOINT =
     'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
 
-  /* 로그아웃 */
+  /* ───── 로그아웃 ───── */
   const handleLogout = useCallback(() => {
-  Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
-    { text: '취소', style: 'cancel' },
-    {
-      text   : '로그아웃',
-      style  : 'destructive',
-      onPress: async () => {
-        await AsyncStorage.removeItem('@userSub');
-
-        /** 🔑 루트 스택으로 완전 초기화 */
-        navigation.dispatch(
-          CommonActions.reset({
-            index : 0,
-            routes: [{ name: 'Welcome' }],  
-          }),
-        );
+    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.removeItem('@userSub');
+          setIsLoggedIn(false);          // ★ 상태 변경 ‼️
+          Alert.alert('로그아웃 완료');
+        },
       },
-    },
-  ]);
-}, [navigation]);
+    ]);
+  }, [setIsLoggedIn]);
 
-  /* 계좌 조회 */
+  /* ───── 계좌 조회 ───── */
   useEffect(() => {
     (async () => {
       try {
@@ -64,9 +62,9 @@ export default function HomeScreen() {
     })();
   }, []);
 
+  /* ───── UI ───── */
   return (
     <Container>
-      {/* 타이틀 + 로그아웃 */}
       <TitleRow>
         <Title>내 계좌</Title>
         <LogoutBtn onPress={handleLogout}>
@@ -79,8 +77,7 @@ export default function HomeScreen() {
           key={acc.accountId}
           onPress={() =>
             navigation.navigate('AccountDetail', { accountId: acc.accountId })
-          }
-        >
+          }>
           <BankTxt>{`${acc.bankName} • ${acc.accountName}`}</BankTxt>
           <BalTxt>{acc.balance.toLocaleString()}원</BalTxt>
         </Card>
@@ -100,7 +97,6 @@ const Container = styled.ScrollView`
   padding: 24px;
 `;
 
-/* 타이틀 + 로그아웃이 한 줄에 */
 const TitleRow = styled.View`
   flex-direction: row;
   justify-content: space-between;
@@ -114,7 +110,6 @@ const Title = styled.Text`
   font-weight: bold;
 `;
 
-/* 로그아웃 버튼 */
 const LogoutBtn = styled.TouchableOpacity`
   padding: 6px 12px;
   background: #ff5555;

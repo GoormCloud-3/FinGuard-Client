@@ -16,13 +16,13 @@ export type RootStackParamList = {
   };
   AccountDetail: { accountId: string} ;
   SendMoney: { fromAccountId: string };
-  EnterAmount: {
+   EnterAmount   : {
     fromAccountId: string;
     myAccount: {
       accountNumber: string;
-      accountName  : string;
-      bankName     : string;
-      balance      : number;
+      accountName : string;
+      bankName    : string;
+      balance     : number;
     };
   };
   CreateAccount: undefined;
