@@ -1,4 +1,3 @@
-// App.tsx
 import 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 enableScreens();
@@ -45,7 +44,7 @@ export default function App() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
   {!isLoggedIn ? (
     <>
-      {/* ① 비로그인 그룹 */}
+      {/* 비로그인 그룹 */}
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login">
         {props => <LoginScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
@@ -55,7 +54,7 @@ export default function App() {
     </>
   ) : (
     <>
-      {/* ② 로그인 그룹 – Home 에 prop 전달 */}
+      {/* 로그인 그룹 – Home 에 prop 전달 */}
       <Stack.Screen name="Home">
         {props => <HomeScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
       </Stack.Screen>

@@ -16,7 +16,7 @@ type Account = {
   balance: number;
 };
 
-/* ✔︎ setIsLoggedIn prop 다시 받기 */
+/* setIsLoggedIn prop 다시 받기 */
 interface Props {
   setIsLoggedIn: (v: boolean) => void;
 }
@@ -36,7 +36,7 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
         style: 'destructive',
         onPress: async () => {
           await AsyncStorage.removeItem('@userSub');
-          setIsLoggedIn(false);          // ★ 상태 변경 ‼️
+          setIsLoggedIn(false);        
           Alert.alert('로그아웃 완료');
         },
       },

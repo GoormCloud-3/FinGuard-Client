@@ -17,7 +17,7 @@ type LoginNavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 export default function LoginScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<LoginNavProp>();
 
-  /* ── 입력 State ── */
+  
   const [id, setId]         = useState('');
   const [pw, setPw]         = useState('');
 
@@ -29,7 +29,7 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
     });
 
     messaging().setBackgroundMessageHandler(async msg => {
-      console.log('📦 Background FCM:', msg);
+      console.log('Background FCM:', msg);
     });
 
     return unsub;
@@ -88,7 +88,7 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
     await AsyncStorage.removeItem('@userSub');
 
     /* 1. Cognito 로그인 → sub 반환 */
-    const userSub = await signIn(id, pw);          // ← signIn 이 문자열 sub 반환
+    const userSub = await signIn(id, pw);          
 
     /* 2. 로컬 저장 */
     await AsyncStorage.setItem('@userSub', userSub);

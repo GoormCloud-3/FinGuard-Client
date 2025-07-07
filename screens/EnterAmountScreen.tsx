@@ -1,4 +1,3 @@
-// screens/EnterAmountScreen.tsx
 import React, { useState } from 'react';
 import {
   Alert,
@@ -17,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { RootStackParamList } from '../types';
 import { getCurrentLocation } from '../src/useCurrentLocation';
+import { sendTransactionToSqs } from '../src/api/sendToSqs';
 
 /* ─── 네비게이션 타입 ─── */
 type Nav = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
@@ -50,34 +50,31 @@ export default function EnterAmountScreen() {
 
   /* ─── 송금 실행 ─── */
   const handleSend = async () => {
-    const money = Number(amount.replace(/,/g, ''));
-    if (!counter.trim())  { Alert.alert('상대 계좌번호를 입력하세요.'); return; }
-    if (!money || money <= 0) { Alert.alert('금액을 입력하세요.');   return; }
+  const money = Number(amount.replace(/,/g, ''));
+  if (!counter.trim())  { Alert.alert('상대 계좌번호를 입력하세요.'); return; }
+  if (!money || money <= 0) { Alert.alert('금액을 입력하세요.');   return; }
 
-    /* 1) 위치를 즉시 조회 */
-    const location = await getCurrentLocation();
-    if (!location) {
-      Alert.alert('위치 실패', '현재 위치를 가져오지 못했습니다.');
-      return;
-    }
+  const location = await getCurrentLocation();
+  if (!location) {
+    Alert.alert('위치 실패', '현재 위치를 가져오지 못했습니다.');
+    return;
+  }
 
-    try {
-      /* 2) userSub 가져오기 */
-      const userSub = await AsyncStorage.getItem('@userSub');
-      if (!userSub) throw new Error('userSub 불러오기 실패');
+  try {
+    const userSub = await AsyncStorage.getItem('@userSub');
+    if (!userSub) throw new Error('userSub 불러오기 실패');
 
-      /* 3) 서버 전송 */
-      const payload = {
-        userSub,
-        my_account      : myAccount.accountNumber,
-        counter_account : counter,
-        money,
-        used_card       : 1,
-        description     : '출금',
-        location        : [location.latitude, location.longitude],
-      };
+    const payload = {
+      userSub,
+      my_account: myAccount.accountNumber,
+      counter_account: counter,
+      money,
+      used_card: 1,
+      description: '출금',
+      location: [location.latitude, location.longitude],
+    };
 
-      const res = await fetch(
+    const res = await fetch(
       'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
       {
         method : 'POST',
@@ -86,16 +83,16 @@ export default function EnterAmountScreen() {
       },
     );
 
-    /* 1) 사기 계좌 의심(403)인 경우 먼저 처리 ――――――――――――――――――――――― */
-    if (res.status === 403) {                                 
-      const { message } = await res.json();                   
-      Alert.alert('송금 차단', message);                      
-      return;                                                 
-    }                                                         
-    /* 2) 기타 오류 */
+    if (res.status === 403) {
+      const { message } = await res.json();
+      Alert.alert('송금 차단', message);
+      return;
+    }
     if (!res.ok) throw new Error(`전송 실패: ${res.status}`);
 
-    /* 3) 성공 */
+    // ✅ 성공 후 SQS 등록
+    await sendTransactionToSqs(payload);
+
     Alert.alert('송금 완료', `${money.toLocaleString()}원 송금되었습니다.`);
     navigation.navigate('Home');
   } catch (e: any) {

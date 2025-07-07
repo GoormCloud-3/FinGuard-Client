@@ -1,4 +1,3 @@
-// screens/AccountDetailScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { Alert, ActivityIndicator } from 'react-native';
 import styled from 'styled-components/native';
