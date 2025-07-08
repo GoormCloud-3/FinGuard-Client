@@ -16,23 +16,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { RootStackParamList } from '../types';
 import { getCurrentLocation } from '../src/useCurrentLocation';
-import { sendTransactionToSqs } from '../src/api/sendToSqs';
+// import { sendTransactionToSqs } from '../src/api/sendToSqs'; // ✅ 더 이상 사용 안함
 
-/* ─── 네비게이션 타입 ─── */
 type Nav = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
 type Rt  = RouteProp<RootStackParamList, 'EnterAmount'>;
 
 export default function EnterAmountScreen() {
   const navigation = useNavigation<Nav>();
   const {
-    params: {  myAccount },
+    params: { myAccount },
   } = useRoute<Rt>();
 
-  /* ─── 상태 ─── */
-  const [counter, setCounter] = useState(''); // 상대 계좌번호
-  const [amount , setAmount ] = useState(''); // 키패드 입력 금액
+  const [counter, setCounter] = useState('');
+  const [amount , setAmount ] = useState('');
 
-  /* ─── 키패드 입력 ─── */
   const onKey = (k: string) => {
     if (k === '←') {
       setAmount(prev => prev.slice(0, -1));
@@ -48,60 +45,58 @@ export default function EnterAmountScreen() {
     setAmount(next);
   };
 
-  /* ─── 송금 실행 ─── */
   const handleSend = async () => {
-  const money = Number(amount.replace(/,/g, ''));
-  if (!counter.trim())  { Alert.alert('상대 계좌번호를 입력하세요.'); return; }
-  if (!money || money <= 0) { Alert.alert('금액을 입력하세요.');   return; }
+    const money = Number(amount.replace(/,/g, ''));
+    if (!counter.trim())  { Alert.alert('상대 계좌번호를 입력하세요.'); return; }
+    if (!money || money <= 0) { Alert.alert('금액을 입력하세요.');   return; }
 
-  const location = await getCurrentLocation();
-  if (!location) {
-    Alert.alert('위치 실패', '현재 위치를 가져오지 못했습니다.');
-    return;
-  }
-
-  try {
-    const userSub = await AsyncStorage.getItem('@userSub');
-    if (!userSub) throw new Error('userSub 불러오기 실패');
-
-    const payload = {
-      userSub,
-      my_account: myAccount.accountNumber,
-      counter_account: counter,
-      money,
-      used_card: 1,
-      description: '출금',
-      location: [location.latitude, location.longitude],
-    };
-
-    const res = await fetch(
-      'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
-      {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify(payload),
-      },
-    );
-
-    if (res.status === 403) {
-      const { message } = await res.json();
-      Alert.alert('송금 차단', message);
+    const location = await getCurrentLocation();
+    if (!location) {
+      Alert.alert('위치 실패', '현재 위치를 가져오지 못했습니다.');
       return;
     }
-    if (!res.ok) throw new Error(`전송 실패: ${res.status}`);
 
-    // ✅ 성공 후 SQS 등록
-    await sendTransactionToSqs(payload);
+    try {
+      const userSub = await AsyncStorage.getItem('@userSub');
+      if (!userSub) throw new Error('userSub 불러오기 실패');
 
-    Alert.alert('송금 완료', `${money.toLocaleString()}원 송금되었습니다.`);
-    navigation.navigate('Home');
-  } catch (e: any) {
-    console.error(e);
-    Alert.alert('오류', e?.message ?? '송금 중 문제가 발생했습니다.');
-  }
-};
+      const payload = {
+        userSub,
+        my_account: myAccount.accountNumber,
+        counter_account: counter,
+        money,
+        used_card: 1,
+        description: '출금',
+        location: [location.latitude, location.longitude],
+      };
 
-  /* ─── UI ─── */
+      const res = await fetch(
+        'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
+        {
+          method : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body   : JSON.stringify(payload),
+        },
+      );
+
+      if (res.status === 403) {
+        const { message } = await res.json();
+        Alert.alert('송금 차단', message);
+        return;
+      }
+      if (!res.ok) throw new Error(`전송 실패: ${res.status}`);
+
+      // ✅ SQS 등록은 더 이상 하지 않음
+      // await sendTransactionToSqs(payload);
+
+      Alert.alert('송금 완료', `${money.toLocaleString()}원 송금되었습니다.`);
+      navigation.navigate('Home');
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert('오류', e?.message ?? '송금 중 문제가 발생했습니다.');
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -118,13 +113,11 @@ export default function EnterAmountScreen() {
             </BackBtn>
           </Header>
 
-          {/* 내 계좌 요약 */}
           <Title>{myAccount.accountName} 계좌에서</Title>
           <BalanceTxt>
             잔액 {myAccount.balance.toLocaleString()}원
           </BalanceTxt>
 
-          {/* 상대 계좌번호 입력 */}
           <SubTitle>받는 사람 계좌번호</SubTitle>
           <AccountInput
             placeholder="예) 123-456-78910"
@@ -137,7 +130,6 @@ export default function EnterAmountScreen() {
           <Prompt>{amount ? '보낼 금액' : '얼마나 보낼까요?'}</Prompt>
           <AmtBox>₩ {Number(amount || '0').toLocaleString()}</AmtBox>
 
-          {/* 키패드 */}
           <Pad>
             {['1','2','3','4','5','6','7','8','9','00','0','←'].map(k => (
               <PadBtn key={k} onPress={() => onKey(k)}>
@@ -155,7 +147,6 @@ export default function EnterAmountScreen() {
   );
 }
 
-/* ─── 스타일 ─── */
 const Container   = styled.View` flex:1; background:#121212; padding:24px;`;
 const Header      = styled.View` flex-direction:row; align-items:center; margin-bottom:24px;`;
 const BackBtn     = styled.TouchableOpacity` padding:12px;`;
