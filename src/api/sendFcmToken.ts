@@ -10,8 +10,6 @@ export const sendFcmTokenToLambda = async (token: string, userId: string) => {
     const payload = JSON.stringify({ token, userId });
 
     const response = await axios.post(
-      // 'https://4b28y6sv19.execute-api.ap-northeast-2.amazonaws.com/register-fcm-token',
-      // 또는 Lambda Function URL 사용 시:
       'https://6yjqie3jjs4ldztle4cvbtcdwi0zuhzr.lambda-url.ap-northeast-2.on.aws/',
       payload,
       {
