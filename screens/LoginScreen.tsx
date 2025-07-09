@@ -1,5 +1,4 @@
-// screens/LoginScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Platform, PermissionsAndroid } from 'react-native';
 import styled from 'styled-components/native';
 import { useNavigation } from '@react-navigation/native';
@@ -9,33 +8,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStackParamList } from '../types';
 import { signIn } from '../src/cognito';
 import messaging from '@react-native-firebase/messaging';
-import { sendFcmTokenToLambda } from '../src/api/sendFcmToken';
 
 type Props = { setIsLoggedIn: (v: boolean) => void };
 type LoginNavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<LoginNavProp>();
+  const [id, setId] = useState('');
+  const [pw, setPw] = useState('');
 
-  
-  const [id, setId]         = useState('');
-  const [pw, setPw]         = useState('');
-
-  /* ───────────── FCM 수신 (포그라운드/백그라운드) ───────────── */
-  useEffect(() => {
-    const unsub = messaging().onMessage(async msg => {
-      Alert.alert(msg.notification?.title ?? '📩 새 알림',
-                  msg.notification?.body  ?? '알림 내용을 확인하세요.');
-    });
-
-    messaging().setBackgroundMessageHandler(async msg => {
-      console.log('Background FCM:', msg);
-    });
-
-    return unsub;
-  }, []);
-
-  /* ───────────── 권한 & 토큰 처리 ───────────── */
+  /* ───── 권한 요청 ───── */
   const requestNotifPermission = async (): Promise<boolean> => {
     if (Platform.OS === 'android') {
       const g = await PermissionsAndroid.request(
@@ -49,7 +31,8 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
     return true;
   };
 
-  const setupFCM = async (userSub: string): Promise<boolean> => {
+  /* ───── FCM 토큰 발급 및 저장 ───── */
+  const setupFCM = async (): Promise<boolean> => {
     try {
       const perm = await messaging().requestPermission();
       const enabled =
@@ -71,8 +54,11 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
       }
 
       console.log('✅ FCM Token:', token);
-      await sendFcmTokenToLambda(token, userSub);      // <- Lambda 전송
-      Alert.alert('푸시 알림 등록 완료', '알림 수신이 정상적으로 설정되었습니다.');
+      await AsyncStorage.setItem('@fcmToken', token);
+
+      // ✅ 토큰 alert로 확인
+      Alert.alert('FCM 토큰 발급 성공', token);
+
       return true;
     } catch (e: any) {
       console.error('❌ FCM 설정 실패:', e);
@@ -81,42 +67,43 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
     }
   };
 
-  /* ───────────── 로그인 ───────────── */
+  /* ───── 로그인 ───── */
   const handleLogin = async () => {
-  try {
-    /* 0. 이전 로그인 정보 정리 */
-    await AsyncStorage.removeItem('@userSub');
+    try {
+      // 이전 로그인 정보 정리
+      await AsyncStorage.multiRemove(['@userSub', '@fcmToken']);
 
-    /* 1. Cognito 로그인 → sub 반환 */
-    const userSub = await signIn(id, pw);          
+      // Cognito 로그인
+      const userSub = await signIn(id, pw);
 
-    /* 2. 로컬 저장 */
-    await AsyncStorage.setItem('@userSub', userSub);
+      // 로컬 저장
+      await AsyncStorage.setItem('@userSub', userSub);
 
-    /* 3. 부가 작업 (알림 권한 + FCM 토큰 등록) */
-    Alert.alert('로그인 성공', '푸시 알림 설정을 시작합니다.');
+      // FCM 권한 + 토큰 발급
+      Alert.alert('로그인 성공', 'FCM 토큰을 확인합니다.');
+      if (await requestNotifPermission()) {
+        await setupFCM();
+      }
 
-    if (await requestNotifPermission()) {
-      if (!(await setupFCM(userSub))) return;            // 실패 시 종료
+      // 로그인 완료 상태 설정
+      setIsLoggedIn(true);
+    } catch (e: any) {
+      Alert.alert(
+        '로그인 실패',
+        e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.',
+      );
     }
+  };
 
-    /* 4. 앱 상태 업데이트 */
-    setIsLoggedIn(true);
-  } catch (e: any) {
-    Alert.alert(
-      '로그인 실패',
-      e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.',
-    );
-  }
-};
-
-  /* ───────────── UI ───────────── */
+  /* ───── UI ───── */
   return (
     <Container>
       <Header>
         <BackBtn
           onPress={() =>
-            navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Welcome')
+            navigation.canGoBack()
+              ? navigation.goBack()
+              : navigation.navigate('Welcome')
           }
         >
           <BackTxt>←</BackTxt>
@@ -144,7 +131,7 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
   );
 }
 
-/* ───────── 스타일 ───────── */
+/* ───── 스타일 ───── */
 const Container = styled.SafeAreaView`
   flex: 1;
   background: #121212;

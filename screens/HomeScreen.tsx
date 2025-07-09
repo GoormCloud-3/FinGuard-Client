@@ -16,7 +16,6 @@ type Account = {
   balance: number;
 };
 
-/* setIsLoggedIn prop 다시 받기 */
 interface Props {
   setIsLoggedIn: (v: boolean) => void;
 }
@@ -27,7 +26,6 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
   const ENDPOINT =
     'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
 
-  /* ───── 로그아웃 ───── */
   const handleLogout = useCallback(() => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
       { text: '취소', style: 'cancel' },
@@ -35,22 +33,28 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.removeItem('@userSub');
-          setIsLoggedIn(false);        
+          await AsyncStorage.multiRemove(['@userSub', '@fcmToken']);
+          setIsLoggedIn(false);
           Alert.alert('로그아웃 완료');
         },
       },
     ]);
   }, [setIsLoggedIn]);
 
-  /* ───── 계좌 조회 ───── */
   useEffect(() => {
     (async () => {
       try {
         const sub = await AsyncStorage.getItem('@userSub');
+        const fcmToken = await AsyncStorage.getItem('@fcmToken');
         if (!sub) throw new Error('사용자 식별자 없음');
+        if (!fcmToken) throw new Error('FCM 토큰 없음');
 
-        const res = await fetch(`${ENDPOINT}/${sub}`);
+        const res = await fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sub, fcmToken }),
+        });
+
         if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
 
         const { accounts } = (await res.json()) as { accounts: Account[] };
@@ -62,7 +66,6 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
     })();
   }, []);
 
-  /* ───── UI ───── */
   return (
     <Container>
       <TitleRow>
@@ -90,7 +93,7 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
   );
 }
 
-/* ───── styled-components ───── */
+/* styled-components */
 const Container = styled.ScrollView`
   flex: 1;
   background: #121212;

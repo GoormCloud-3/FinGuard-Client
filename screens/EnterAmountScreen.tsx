@@ -86,7 +86,7 @@ export default function EnterAmountScreen() {
       }
       if (!res.ok) throw new Error(`전송 실패: ${res.status}`);
 
-      // ✅ SQS 등록은 더 이상 하지 않음
+      // SQS 등록은 더 이상 하지 않음
       // await sendTransactionToSqs(payload);
 
       Alert.alert('송금 완료', `${money.toLocaleString()}원 송금되었습니다.`);
