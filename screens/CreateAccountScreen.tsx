@@ -10,34 +10,30 @@ import { RootStackParamList } from '../types';
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
 
 export default function CreateAccountScreen({ navigation }: Props) {
-  /* ── 입력값 ── */
   const [accountName, setAccountName] = useState('');
-  const [bankName,   setBankName]   = useState('');
+  const [bankName, setBankName] = useState('');
 
-  /* ── 계좌 생성 ── */
   const handleCreate = async () => {
     if (!accountName.trim() || !bankName.trim()) {
       Alert.alert('모든 필드를 입력해주세요.');
       return;
     }
 
-    /* ① 로그인 때 저장해 둔 sub 읽기 */
     const userSub = await AsyncStorage.getItem('@userSub');
     if (!userSub) {
       Alert.alert('세션 오류', '사용자 정보를 찾을 수 없습니다. 다시 로그인해 주세요.');
       return;
     }
 
-    /* ② 전송 Payload */
     const payload = {
       userSub,
       accountName: accountName.trim(),
-      bankName:   bankName.trim(),
+      bankName: bankName.trim(),
     };
 
     try {
       const res = await fetch(
-        'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/financial/accounts',
+        'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/financial/createAccounts',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -45,7 +41,12 @@ export default function CreateAccountScreen({ navigation }: Props) {
         }
       );
 
-      if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+      const json = await res.json(); // ✅ 응답 JSON 추출
+
+      if (!res.ok) {
+        const errMsg = json?.message || `서버 오류: ${res.status}`;
+        throw new Error(errMsg);
+      }
 
       Alert.alert('통장이 생성되었습니다!', '', [
         { text: '확인', onPress: () => navigation.navigate('Home') },
@@ -56,7 +57,6 @@ export default function CreateAccountScreen({ navigation }: Props) {
     }
   };
 
-  /* ── UI ── */
   return (
     <Container>
       <Title>새 통장 만들기</Title>

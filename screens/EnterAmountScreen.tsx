@@ -71,7 +71,7 @@ export default function EnterAmountScreen() {
       };
 
       const res = await fetch(
-        'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
+        'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
         {
           method : 'POST',
           headers: { 'Content-Type': 'application/json' },

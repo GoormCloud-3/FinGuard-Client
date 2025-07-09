@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import styled from 'styled-components/native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../types';
@@ -24,7 +24,7 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<Nav>();
   const [accs, setAccs] = useState<Account[]>([]);
   const ENDPOINT =
-    'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
+    'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
 
   const handleLogout = useCallback(() => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
@@ -41,30 +41,34 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
     ]);
   }, [setIsLoggedIn]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const sub = await AsyncStorage.getItem('@userSub');
-        const fcmToken = await AsyncStorage.getItem('@fcmToken');
-        if (!sub) throw new Error('사용자 식별자 없음');
-        if (!fcmToken) throw new Error('FCM 토큰 없음');
+  useFocusEffect(
+    useCallback(() => {
+      const fetchAccounts = async () => {
+        try {
+          const sub = await AsyncStorage.getItem('@userSub');
+          const fcmToken = await AsyncStorage.getItem('@fcmToken');
+          if (!sub) throw new Error('사용자 식별자 없음');
+          if (!fcmToken) throw new Error('FCM 토큰 없음');
 
-        const res = await fetch(ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sub, fcmToken }),
-        });
+          const res = await fetch(ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sub, fcmToken }),
+          });
 
-        if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
+          if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
 
-        const { accounts } = (await res.json()) as { accounts: Account[] };
-        setAccs(accounts);
-      } catch (e: any) {
-        console.error(e);
-        Alert.alert('계좌 조회 실패', e?.message ?? '알 수 없는 오류');
-      }
-    })();
-  }, []);
+          const { accounts } = (await res.json()) as { accounts: Account[] };
+          setAccs(accounts);
+        } catch (e: any) {
+          console.error(e);
+          Alert.alert('계좌 조회 실패', e?.message ?? '알 수 없는 오류');
+        }
+      };
+
+      fetchAccounts();
+    }, [])
+  );
 
   return (
     <Container>

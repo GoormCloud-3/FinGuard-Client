@@ -3,42 +3,40 @@ import { Alert, ActivityIndicator } from 'react-native';
 import styled from 'styled-components/native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
 import { RootStackParamList } from '../types';
 
-/* ── 타입 ─────────────────────────────────────────────── */
+/* ── 타입 ─ */
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AccountDetail'>;
 type Rt  = RouteProp<RootStackParamList, 'AccountDetail'>;
 
 type Transaction = {
   transactionId: string;
-  title        : string;
-  time         : string;
-  amount       : number;
-  isAnomaly?   : boolean;
+  title: string;
+  time: string;
+  amount: number;
+  isAnomaly?: boolean;
 };
 
 type AccountRes = {
-  accountId    : string;
-  accountName  : string;
+  accountId: string;
+  accountName: string;
   accountNumber: string;
-  bankName     : string;
-  balance      : number;
-  transactions : Transaction[];
+  bankName: string;
+  balance: number;
+  transactions: Transaction[];
 };
 
-/* ── 컴포넌트 ─────────────────────────────────────────── */
+/* ── 컴포넌트 ─ */
 export default function AccountDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { params: { accountId } } = useRoute<Rt>();
 
-  const [data   , setData   ] = useState<AccountRes | null>(null);
+  const [data, setData] = useState<AccountRes | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'normal' | 'anomaly'>('normal');
 
-  const ENDPOINT =
-    'https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/accounts';
+  const ENDPOINT = 'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/accounts';
 
-  /* 계좌 + 거래 조회 */
   useEffect(() => {
     (async () => {
       try {
@@ -54,44 +52,45 @@ export default function AccountDetailScreen() {
     })();
   }, [accountId]);
 
-  /* 보내기 → EnterAmount (PIN 확인 생략) */
   const handleSend = () => {
-  if (!data) {
-    Alert.alert('계좌 정보를 불러오지 못했습니다.');
-    return;
-  }
+    if (!data) {
+      Alert.alert('계좌 정보를 불러오지 못했습니다.');
+      return;
+    }
 
-  navigation.navigate('EnterAmount', {
-    fromAccountId: data.accountId,
-    myAccount: {
-      accountNumber: data.accountNumber,
-      accountName  : data.accountName,
-      bankName     : data.bankName,
-      balance      : data.balance,
-    },
-  });
-};
-  /* 로딩 / 오류 화면 */
-  if (loading)
+    navigation.navigate('EnterAmount', {
+      fromAccountId: data.accountId,
+      myAccount: {
+        accountNumber: data.accountNumber,
+        accountName: data.accountName,
+        bankName: data.bankName,
+        balance: data.balance,
+      },
+    });
+  };
+
+  if (loading) {
     return (
       <Center>
         <ActivityIndicator color="#00c471" />
       </Center>
     );
+  }
 
-  if (!data)
+  if (!data) {
     return (
       <Center>
         <Label>계좌 정보를 불러오지 못했습니다.</Label>
       </Center>
     );
+  }
 
-  const normal  = data.transactions.filter(t => !t.isAnomaly);
-  const anomaly = data.transactions.filter(t =>  t.isAnomaly);
+  const normal = data.transactions.filter(t => !t.isAnomaly);
+  const anomaly = data.transactions.filter(t => t.isAnomaly);
 
   return (
     <Container>
-      {/* ← 뒤로가기 */}
+      {/* 뒤로가기 */}
       <Header>
         <BackBtn onPress={() => navigation.goBack()}>
           <BackTxt>←</BackTxt>
@@ -105,25 +104,18 @@ export default function AccountDetailScreen() {
         <BalTxt>{data.balance.toLocaleString()}원</BalTxt>
       </InfoBox>
 
-      {/* 정상 거래 */}
-      <Section>📋 정상 거래</Section>
-      {normal.map(t => (
-        <Txn key={t.transactionId}>
-          <Label>{t.title}</Label>
-          <Row>
-            <Label>{t.time}</Label>
-            <Amt pos={t.amount >= 0}>
-              {t.amount >= 0 ? '+' : ''}
-              {t.amount.toLocaleString()}원
-            </Amt>
-          </Row>
-        </Txn>
-      ))}
+      {/* 탭 전환 */}
+      <TabRow>
+        <TabButton active={tab === 'normal'} onPress={() => setTab('normal')}>
+          <TabText active={tab === 'normal'}>📋 정상 거래</TabText>
+        </TabButton>
+        <TabButton active={tab === 'anomaly'} onPress={() => setTab('anomaly')}>
+          <TabText active={tab === 'anomaly'}>🚨 이상 거래</TabText>
+        </TabButton>
+      </TabRow>
 
-      {/* 이상 거래 */}
-      <Section>🚨 이상 거래</Section>
-      {anomaly.length ? (
-        anomaly.map(t => (
+      <ScrollView>
+        {(tab === 'normal' ? normal : anomaly).map(t => (
           <Txn key={t.transactionId}>
             <Label>{t.title}</Label>
             <Row>
@@ -134,10 +126,12 @@ export default function AccountDetailScreen() {
               </Amt>
             </Row>
           </Txn>
-        ))
-      ) : (
-        <Label style={{ color: '#666', marginBottom: 16 }}>이상 거래 없음</Label>
-      )}
+        ))}
+
+        {tab === 'anomaly' && anomaly.length === 0 && (
+          <Label style={{ color: '#666', marginBottom: 16 }}>이상 거래 없음</Label>
+        )}
+      </ScrollView>
 
       {/* 하단 버튼 */}
       <Row style={{ marginTop: 40 }}>
@@ -148,22 +142,29 @@ export default function AccountDetailScreen() {
   );
 }
 
-/* ── 스타일 ──────────────────────────────────────────── */
-const Container = styled.ScrollView`
+/* ── 스타일 ─ */
+const Container = styled.View`
   flex: 1;
   background: #121212;
   padding: 24px;
 `;
+
+const ScrollView = styled.ScrollView`
+  margin-top: 12px;
+`;
+
 const Center = styled.View`
   flex: 1;
   justify-content: center;
   align-items: center;
   background: #121212;
 `;
+
 const Header = styled.View`
   flex-direction: row;
   margin-bottom: 16px;
 `;
+
 const BackBtn = styled.TouchableOpacity`padding: 12px;`;
 const BackTxt = styled.Text`color: #fff; font-size: 36px;`;
 
@@ -172,22 +173,37 @@ const BankTxt = styled.Text`color: #aaa; font-size: 14px;`;
 const NumTxt  = styled.Text`color: #666; font-size: 14px; margin-top: 2px;`;
 const BalTxt  = styled.Text`color: #fff; font-size: 32px; font-weight: bold; margin-top: 4px;`;
 
-const Section = styled.Text`
-  color: #00c471;
-  font-size: 16px;
-  font-weight: bold;
-  margin: 24px 0 8px;
+const TabRow = styled.View`
+  flex-direction: row;
+  justify-content: space-around;
+  margin-bottom: 8px;
 `;
+
+const TabButton = styled.TouchableOpacity<{ active: boolean }>`
+  padding: 10px 16px;
+  border-bottom-width: 2px;
+  border-bottom-color: ${({ active }) => (active ? '#00c471' : 'transparent')};
+`;
+
+const TabText = styled.Text<{ active: boolean }>`
+  color: ${({ active }) => (active ? '#00c471' : '#aaa')};
+  font-weight: bold;
+  font-size: 16px;
+`;
+
 const Txn = styled.View`
   padding: 16px 0;
   border-bottom-width: 1px;
   border-bottom-color: #333;
 `;
+
 const Row = styled.View`
   flex-direction: row;
   justify-content: space-between;
 `;
+
 const Label = styled.Text`color: #ddd; font-size: 15px;`;
+
 const Amt = styled.Text<{ pos: boolean }>`
   color: ${({ pos }) => (pos ? '#4da6ff' : '#f44336')};
   font-size: 15px;
@@ -201,4 +217,5 @@ const ActBtn = styled.TouchableOpacity`
   border-radius: 12px;
   align-items: center;
 `;
+
 const ActTxt = styled.Text`color: #fff; font-weight: bold; font-size: 16px;`;

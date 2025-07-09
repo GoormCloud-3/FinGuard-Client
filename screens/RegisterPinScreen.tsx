@@ -35,7 +35,7 @@ export default function RegisterPinScreen({ route, navigation }: Props) {
       });
 
       /* 2) 좌표를 배열로 묶어 외부 API 전송 */
-      await fetch('https://8v0xmmt294.execute-api.ap-northeast-2.amazonaws.com/users', {
+      await fetch('https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
