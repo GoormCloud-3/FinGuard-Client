@@ -6,11 +6,11 @@ import {
   CognitoUserAttribute,
   AuthenticationDetails,
 } from 'amazon-cognito-identity-js';
-
+import { AWS_CLIENT_ID, AWS_USER_POOL } from '@env';
 /* ✅ 사용자 풀 설정 */
 const poolData = {
-  UserPoolId: 'ap-northeast-2_SNy2daNcS',      // your pool
-  ClientId:   '1p6gp10unb3v2ovm5mkslpsbuj',    // your client
+  UserPoolId: `${AWS_USER_POOL}`,      // your pool
+  ClientId:   `${AWS_CLIENT_ID}`,    // your client
 };
 
 export const userPool = new CognitoUserPool(poolData);

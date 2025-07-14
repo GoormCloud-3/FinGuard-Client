@@ -16,7 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { RootStackParamList } from '../types';
 import { getCurrentLocation } from '../src/useCurrentLocation';
-// import { sendTransactionToSqs } from '../src/api/sendToSqs'; // ✅ 더 이상 사용 안함
+
+import { API_URL } from '@env';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'EnterAmount'>;
 type Rt  = RouteProp<RootStackParamList, 'EnterAmount'>;
@@ -71,7 +72,7 @@ export default function EnterAmountScreen() {
       };
 
       const res = await fetch(
-        'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/banks/accounts',
+        `${API_URL}/banks/accounts`,
         {
           method : 'POST',
           headers: { 'Content-Type': 'application/json' },

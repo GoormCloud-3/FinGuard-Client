@@ -56,8 +56,8 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
       console.log('✅ FCM Token:', token);
       await AsyncStorage.setItem('@fcmToken', token);
 
-      // ✅ 토큰 alert로 확인
-      Alert.alert('FCM 토큰 발급 성공', token);
+      // // ✅ 토큰 alert로 확인
+      // Alert.alert('FCM 토큰 발급 성공', token);
 
       return true;
     } catch (e: any) {
@@ -80,7 +80,7 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
       await AsyncStorage.setItem('@userSub', userSub);
 
       // FCM 권한 + 토큰 발급
-      Alert.alert('로그인 성공', 'FCM 토큰을 확인합니다.');
+      // Alert.alert('로그인 성공', 'FCM 토큰을 확인합니다.');
       if (await requestNotifPermission()) {
         await setupFCM();
       }

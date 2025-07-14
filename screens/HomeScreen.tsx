@@ -5,7 +5,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RootStackParamList } from '../types';
-
+import { API_URL } from '@env';
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 type Account = {
@@ -23,8 +23,6 @@ interface Props {
 export default function HomeScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<Nav>();
   const [accs, setAccs] = useState<Account[]>([]);
-  const ENDPOINT =
-    'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/financial/accounts';
 
   const handleLogout = useCallback(() => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
@@ -43,6 +41,8 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
 
   useFocusEffect(
     useCallback(() => {
+       const ENDPOINT =
+    `${API_URL}/financial/accounts`;
       const fetchAccounts = async () => {
         try {
           const sub = await AsyncStorage.getItem('@userSub');

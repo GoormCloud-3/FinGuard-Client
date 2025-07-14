@@ -4,7 +4,7 @@ import styled from 'styled-components/native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-
+import { API_URL } from '@env';
 /* ── 타입 ─ */
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AccountDetail'>;
 type Rt  = RouteProp<RootStackParamList, 'AccountDetail'>;
@@ -35,9 +35,10 @@ export default function AccountDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'normal' | 'anomaly'>('normal');
 
-  const ENDPOINT = 'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/accounts';
+  
 
   useEffect(() => {
+    const ENDPOINT = `${API_URL}/accounts`;
     (async () => {
       try {
         const res = await fetch(`${ENDPOINT}/${accountId}`);

@@ -4,7 +4,7 @@ import styled from 'styled-components/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { signUp } from '../src/cognito';
-
+import { API_URL } from '@env';
 type Props = NativeStackScreenProps<RootStackParamList, 'RegisterPin'>;
 
 export default function RegisterPinScreen({ route, navigation }: Props) {
@@ -35,7 +35,7 @@ export default function RegisterPinScreen({ route, navigation }: Props) {
       });
 
       /* 2) 좌표를 배열로 묶어 외부 API 전송 */
-      await fetch('https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/users', {
+      await fetch(`${API_URL}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

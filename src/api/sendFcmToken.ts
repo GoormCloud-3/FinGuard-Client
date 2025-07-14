@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import { AWS_API_URL } from '@env'; 
 /**
  * 로그인 후 발급된 FCM 토큰을 Lambda 함수로 전송
  * @param token FCM token
@@ -10,7 +10,7 @@ export const sendFcmTokenToLambda = async (token: string, userId: string) => {
     const payload = JSON.stringify({ token, userId });
 
     const response = await axios.post(
-      'https://6yjqie3jjs4ldztle4cvbtcdwi0zuhzr.lambda-url.ap-northeast-2.on.aws/',
+      `${AWS_API_URL}`,
       payload,
       {
         headers: {

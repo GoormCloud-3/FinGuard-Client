@@ -4,7 +4,7 @@ import { Alert } from 'react-native';
 import styled from 'styled-components/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-
+import { API_URL } from '@env';
 import { RootStackParamList } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
@@ -33,7 +33,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
 
     try {
       const res = await fetch(
-        'https://57ku0orsuj.execute-api.ap-northeast-2.amazonaws.com/financial/createAccounts',
+        `${API_URL}/financial/createAccounts`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
