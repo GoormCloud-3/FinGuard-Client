@@ -1,10 +1,6 @@
 import axios from 'axios';
 import { AWS_API_URL } from '@env'; 
-/**
- * 로그인 후 발급된 FCM 토큰을 Lambda 함수로 전송
- * @param token FCM token
- * @param userId 사용자 아이디
- */
+
 export const sendFcmTokenToLambda = async (token: string, userId: string) => {
   try {
     const payload = JSON.stringify({ token, userId });

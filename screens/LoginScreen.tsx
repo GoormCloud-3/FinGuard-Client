@@ -8,6 +8,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthStackParamList } from '../types';
 import { signIn } from '../src/cognito';
 import messaging from '@react-native-firebase/messaging';
+import { saveFcmToken, deleteFcmToken } from '../src/secureStorage';
+import * as Keychain from 'react-native-keychain';
+import { sendFcmTokenToLambda } from '../src/api/sendFcmToken';
 
 type Props = { setIsLoggedIn: (v: boolean) => void };
 type LoginNavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -31,67 +34,91 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
     return true;
   };
 
-  /* ───── FCM 토큰 발급 및 저장 ───── */
-  const setupFCM = async (): Promise<boolean> => {
+  /* ───── FCM 토큰 발급 및 저장 (로그인 시마다 갱신) ───── */
+  const setupFCM = async (): Promise<string | null> => {
     try {
+      // 권한 요청
       const perm = await messaging().requestPermission();
       const enabled =
         perm === messaging.AuthorizationStatus.AUTHORIZED ||
         perm === messaging.AuthorizationStatus.PROVISIONAL;
       if (!enabled) {
         Alert.alert('FCM 권한 거부됨', '푸시 알림을 받을 수 없습니다.');
-        return false;
+        return null;
       }
 
-      let token = await messaging().getToken();
-      if (!token) {
-        await messaging().deleteToken();
-        token = await messaging().getToken();
-      }
+      // 🔄 기존 토큰 삭제
+      await deleteFcmToken();
+      await messaging().deleteToken();
+
+      // ✅ 새 토큰 발급
+      const token = await messaging().getToken();
       if (!token) {
         Alert.alert('FCM 토큰 발급 실패', '푸시 알림을 받을 수 없습니다.');
-        return false;
+        return null;
       }
 
-      console.log('✅ FCM Token:', token);
-      await AsyncStorage.setItem('@fcmToken', token);
+      console.log('✅ 새 FCM Token:', token);
 
-      // // ✅ 토큰 alert로 확인
-      // Alert.alert('FCM 토큰 발급 성공', token);
+      // 🔐 SecureStorage 저장
+      await saveFcmToken(token);
 
-      return true;
+      return token;
     } catch (e: any) {
       console.error('❌ FCM 설정 실패:', e);
       Alert.alert('FCM 설정 실패', e?.message ?? '오류가 발생했습니다.');
-      return false;
+      return null;
     }
   };
 
-  /* ───── 로그인 ───── */
+  /* ───── 로그인 (기존 handleLogin 주석처리) ───── */
+  // const handleLogin = async () => {
+  //   try {
+  //     await AsyncStorage.multiRemove(['@userSub', '@fcmToken']);
+  //     const { sub, idToken } = await signIn(id, pw);
+  //     await AsyncStorage.setItem('@userSub', sub);
+  //     await Keychain.setGenericPassword('jwt', idToken, { service: 'id_token' });
+  //     if (await requestNotifPermission()) {
+  //       await setupFCM();
+  //     }
+  //     setIsLoggedIn(true);
+  //   } catch (e: any) {
+  //     Alert.alert('로그인 실패', e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.');
+  //   }
+  // };
+
   const handleLogin = async () => {
     try {
-      // 이전 로그인 정보 정리
+      // 1. 이전 로그인 정보 제거
       await AsyncStorage.multiRemove(['@userSub', '@fcmToken']);
 
-      // Cognito 로그인
-      const userSub = await signIn(id, pw);
+      // 2. Cognito 로그인
+      const { sub, idToken } = await signIn(id, pw);
 
-      // 로컬 저장
-      await AsyncStorage.setItem('@userSub', userSub);
+      // 3. 사용자 정보 저장
+      await AsyncStorage.setItem('@userSub', sub);
+      await Keychain.setGenericPassword('jwt', idToken, { service: 'id_token' });
 
-      // FCM 권한 + 토큰 발급
-      // Alert.alert('로그인 성공', 'FCM 토큰을 확인합니다.');
-      if (await requestNotifPermission()) {
-        await setupFCM();
+      // 4. 알림 권한 확인
+      const granted = await requestNotifPermission();
+      if (!granted) return;
+
+      // 5. FCM 토큰 갱신 및 저장
+      const newToken = await setupFCM();
+      if (!newToken) return;
+
+      // 6. Lambda에 FCM 토큰 전송
+      try {
+        await sendFcmTokenToLambda(newToken, sub);
+        console.log('✅ FCM 토큰을 Lambda에 성공적으로 전송했습니다.');
+      } catch (err) {
+        console.error('❌ Lambda 전송 실패:', err);
       }
 
-      // 로그인 완료 상태 설정
+      // 7. 로그인 상태 변경
       setIsLoggedIn(true);
     } catch (e: any) {
-      Alert.alert(
-        '로그인 실패',
-        e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.',
-      );
+      Alert.alert('로그인 실패', e?.message ?? '아이디 또는 비밀번호가 올바르지 않습니다.');
     }
   };
 

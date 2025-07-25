@@ -7,7 +7,7 @@ import {
   AuthenticationDetails,
 } from 'amazon-cognito-identity-js';
 import { AWS_CLIENT_ID, AWS_USER_POOL } from '@env';
-/* ✅ 사용자 풀 설정 */
+/* 사용자 풀 설정 */
 const poolData = {
   UserPoolId: `${AWS_USER_POOL}`,      // your pool
   ClientId:   `${AWS_CLIENT_ID}`,    // your client
@@ -57,16 +57,17 @@ export function signUp(params: {
 export async function signIn(
   id: string,
   password: string,
-): Promise<string> {            // ✅ sub 문자열 반환
+): Promise<{ sub: string; idToken: string }> {
   const user = new CognitoUser({ Username: id, Pool: userPool });
   const authDetails = new AuthenticationDetails({ Username: id, Password: password });
 
   return new Promise((resolve, reject) => {
     user.authenticateUser(authDetails, {
       onSuccess: session => {
-        // id 토큰 payload 안에 sub 포함
-        const sub: string = session.getIdToken().payload.sub;
-        resolve(sub);
+        const sub = session.getIdToken().payload.sub;
+        // jwt 토큰 저장
+        const idToken = session.getIdToken().getJwtToken(); 
+        resolve({ sub, idToken });
       },
       onFailure: err => reject(err),
     });

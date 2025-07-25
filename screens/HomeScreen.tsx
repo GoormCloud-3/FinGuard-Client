@@ -1,11 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert} from 'react-native';
 import styled from 'styled-components/native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import messaging from '@react-native-firebase/messaging';
+
 import { RootStackParamList } from '../types';
 import { API_URL } from '@env';
+import { getFcmToken, deleteFcmToken } from '../src/secureStorage';
+
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 type Account = {
@@ -24,6 +28,22 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
   const navigation = useNavigation<Nav>();
   const [accs, setAccs] = useState<Account[]>([]);
 
+  /* ───── FCM 메시지 수신 처리 ───── */
+  useFocusEffect(
+    useCallback(() => {
+      const unsubscribe = messaging().onMessage(async remoteMessage => {
+        console.log('🔔 포그라운드 수신 메시지:', remoteMessage);
+        Alert.alert(
+          remoteMessage.notification?.title || '알림',
+          remoteMessage.notification?.body || '메시지가 도착했습니다.'
+        );
+      });
+
+      return () => unsubscribe();
+    }, [])
+  );
+
+  /* ───── 로그아웃 ───── */
   const handleLogout = useCallback(() => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
       { text: '취소', style: 'cancel' },
@@ -31,7 +51,8 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
-          await AsyncStorage.multiRemove(['@userSub', '@fcmToken']);
+          await AsyncStorage.removeItem('@userSub');
+          await deleteFcmToken(); // SecureStorage에서 FCM 토큰 제거
           setIsLoggedIn(false);
           Alert.alert('로그아웃 완료');
         },
@@ -39,14 +60,16 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
     ]);
   }, [setIsLoggedIn]);
 
+  /* ───── 계좌 조회 ───── */
   useFocusEffect(
     useCallback(() => {
-       const ENDPOINT =
-    `${API_URL}/financial/accounts`;
+      const ENDPOINT = `${API_URL}/financial/accounts`;
+
       const fetchAccounts = async () => {
         try {
           const sub = await AsyncStorage.getItem('@userSub');
-          const fcmToken = await AsyncStorage.getItem('@fcmToken');
+          const fcmToken = await getFcmToken();
+
           if (!sub) throw new Error('사용자 식별자 없음');
           if (!fcmToken) throw new Error('FCM 토큰 없음');
 
@@ -70,6 +93,7 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
     }, [])
   );
 
+  /* ───── UI ───── */
   return (
     <Container>
       <TitleRow>
@@ -97,7 +121,7 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
   );
 }
 
-/* styled-components */
+/* ───── 스타일 ───── */
 const Container = styled.ScrollView`
   flex: 1;
   background: #121212;
