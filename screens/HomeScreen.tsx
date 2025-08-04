@@ -65,6 +65,8 @@ export default function HomeScreen({ setIsLoggedIn }: Props) {
     useCallback(() => {
       const ENDPOINT = `${API_URL}/financial/accounts`;
 
+
+      
       const fetchAccounts = async () => {
         try {
           const sub = await AsyncStorage.getItem('@userSub');
