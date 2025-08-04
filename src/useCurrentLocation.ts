@@ -1,5 +1,6 @@
-import { Alert, Linking, PermissionsAndroid} from 'react-native';
+import { Alert, Linking, PermissionsAndroid } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import DeviceInfo from 'react-native-device-info';
 
 export type Location =
   | { latitude: number; longitude: number }
@@ -24,12 +25,22 @@ export async function getCurrentLocation(): Promise<Location> {
   }
 
   /* 2) 현재 위치 수신 */
-  return new Promise<Location>((resolve) => {
+  return new Promise<Location>(async (resolve) => {
+    // const isEmulator = await DeviceInfo.isEmulator();
+
+    // if (isEmulator) {
+    //   Alert.alert(
+    //     '보안 경고',
+    //     '에뮬레이터에서는 위치 기반 기능을 사용할 수 없습니다.'
+    //   );
+    //   return resolve(null);
+    // }
+
     Geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const mocked = (pos as any).mocked;
-        
+
         if (mocked === true) {
           console.warn('이상 위치 감지됨');
           Alert.alert(
@@ -42,7 +53,7 @@ export async function getCurrentLocation(): Promise<Location> {
         }
       },
       (err) => {
-        console.warn(' 위치 오류:', err);
+        console.warn('위치 오류:', err);
         Alert.alert('위치 오류', '현재 위치를 가져올 수 없습니다.');
         resolve(null);
       },
