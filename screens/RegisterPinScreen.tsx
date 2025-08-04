@@ -4,7 +4,7 @@ import styled from 'styled-components/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { signUp } from '../src/cognito';
-import { API_URL } from '@env';
+import { API_URL, AWS_LAMBDA_URL } from '@env';
 type Props = NativeStackScreenProps<RootStackParamList, 'RegisterPin'>;
 
 export default function RegisterPinScreen({ route, navigation }: Props) {
@@ -23,34 +23,48 @@ export default function RegisterPinScreen({ route, navigation }: Props) {
 
   /* ───── submit ───── */
   const handleSubmit = async () => {
-    if (pin.length !== 4) return Alert.alert('4자리 숫자를 입력해주세요.');
+  if (pin.length !== 4) return Alert.alert('4자리 숫자를 입력해주세요.');
 
-    try {
-      /* 1) Cognito signup */
-      const { userSub } = await signUp({
-        id, password, name, email, birthdate, address,
-        latitude: String(latitude),
-        longitude: String(longitude),
-        secondaryPin: pin,
-      });
+  try {
+    /* 1) Cognito signup */
+    const { userSub } = await signUp({
+      id,
+      password,
+      name,
+      email,
+      birthdate,
+      address,
+      latitude: String(latitude),
+      longitude: String(longitude),
+      secondaryPin: pin,
+    });
+    // 2) Lambda Function URL로 사용자 인증 요청
+    await fetch(`${AWS_LAMBDA_URL}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: id, 
+        userPoolId: 'ap-northeast-2_SANDR0Zpb', 
+      }),
+    });
 
-      /* 2) 좌표를 배열로 묶어 외부 API 전송 */
-      await fetch(`${API_URL}/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-           userSub: userSub,
-          gps_location: [Number(latitude), Number(longitude)],  
-        }),
-      });
+     /* 2) 좌표를 배열로 묶어 외부 API 전송 */
+     await fetch(`${API_URL}/users`, {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({
+         userSub: userSub,
+         gps_location: [Number(latitude), Number(longitude)],
+       }),
+     });
 
-      Alert.alert('회원가입 완료', '이제 로그인해 주세요.');
-      navigation.navigate('Login');
-    } catch (err: any) {
-      console.error('회원가입 실패:', err);
-      Alert.alert('회원가입 실패', err?.message ?? '문제가 발생했습니다.');
-    }
-  };
+    Alert.alert('회원가입 완료', '이제 로그인해 주세요.');
+    navigation.navigate('Login');
+  } catch (err: any) {
+    console.error('회원가입 실패:', err);
+    Alert.alert('회원가입 실패', err?.message ?? '문제가 발생했습니다.');
+  }
+};
 
   
   return (
