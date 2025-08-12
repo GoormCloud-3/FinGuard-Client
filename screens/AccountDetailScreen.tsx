@@ -5,7 +5,8 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
 import { API_URL } from '@env';
-/* ── 타입 ─ */
+import { sanitizeDisplayText } from '../src/security/sanitize'; 
+
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AccountDetail'>;
 type Rt  = RouteProp<RootStackParamList, 'AccountDetail'>;
 
@@ -26,7 +27,6 @@ type AccountRes = {
   transactions: Transaction[];
 };
 
-/* ── 컴포넌트 ─ */
 export default function AccountDetailScreen() {
   const navigation = useNavigation<Nav>();
   const { params: { accountId } } = useRoute<Rt>();
@@ -35,13 +35,19 @@ export default function AccountDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'normal' | 'anomaly'>('normal');
 
-  
+  // route 파라미터 화이트리스트 정제 (영숫자/대시/언더스코어만)
+  const safeAccountId = String(accountId).replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 64);
 
   useEffect(() => {
+    if (!safeAccountId) {
+      Alert.alert('잘못된 접근', '계좌 식별자가 올바르지 않습니다.');
+      setLoading(false);
+      return;
+    }
     const ENDPOINT = `${API_URL}/accounts`;
     (async () => {
       try {
-        const res = await fetch(`${ENDPOINT}/${accountId}`);
+        const res = await fetch(`${ENDPOINT}/${safeAccountId}`);
         if (!res.ok) throw new Error(`서버 오류: ${res.status}`);
         setData(await res.json());
       } catch (e: any) {
@@ -51,14 +57,10 @@ export default function AccountDetailScreen() {
         setLoading(false);
       }
     })();
-  }, [accountId]);
+  }, [safeAccountId]);
 
   const handleSend = () => {
-    if (!data) {
-      Alert.alert('계좌 정보를 불러오지 못했습니다.');
-      return;
-    }
-
+    if (!data) { Alert.alert('계좌 정보를 불러오지 못했습니다.'); return; }
     navigation.navigate('EnterAmount', {
       fromAccountId: data.accountId,
       myAccount: {
@@ -91,21 +93,18 @@ export default function AccountDetailScreen() {
 
   return (
     <Container>
-      {/* 뒤로가기 */}
       <Header>
         <BackBtn onPress={() => navigation.goBack()}>
           <BackTxt>←</BackTxt>
         </BackBtn>
       </Header>
 
-      {/* 계좌 요약 */}
       <InfoBox>
-        <BankTxt>{`${data.bankName}  ${data.accountName}`}</BankTxt>
-        <NumTxt>{data.accountNumber}</NumTxt>
+        <BankTxt>{`${sanitizeDisplayText(data.bankName, 40)}  ${sanitizeDisplayText(data.accountName, 40)}`}</BankTxt>
+        <NumTxt>{sanitizeDisplayText(data.accountNumber, 40)}</NumTxt>
         <BalTxt>{data.balance.toLocaleString()}원</BalTxt>
       </InfoBox>
 
-      {/* 탭 전환 */}
       <TabRow>
         <TabButton active={tab === 'normal'} onPress={() => setTab('normal')}>
           <TabText active={tab === 'normal'}>📋 정상 거래</TabText>
@@ -118,9 +117,9 @@ export default function AccountDetailScreen() {
       <ScrollView>
         {(tab === 'normal' ? normal : anomaly).map(t => (
           <Txn key={t.transactionId}>
-            <Label>{t.title}</Label>
+            <Label>{sanitizeDisplayText(t.title, 80)}</Label>
             <Row>
-              <Label>{t.time}</Label>
+              <Label>{sanitizeDisplayText(t.time, 80)}</Label>
               <Amt pos={t.amount >= 0}>
                 {t.amount >= 0 ? '+' : ''}
                 {t.amount.toLocaleString()}원
@@ -134,7 +133,6 @@ export default function AccountDetailScreen() {
         )}
       </ScrollView>
 
-      {/* 하단 버튼 */}
       <Row style={{ marginTop: 40 }}>
         <ActBtn><ActTxt>채우기</ActTxt></ActBtn>
         <ActBtn onPress={handleSend}><ActTxt>보내기</ActTxt></ActBtn>
@@ -143,80 +141,33 @@ export default function AccountDetailScreen() {
   );
 }
 
-/* ── 스타일 ─ */
-const Container = styled.View`
-  flex: 1;
-  background: #121212;
-  padding: 24px;
-`;
 
-const ScrollView = styled.ScrollView`
-  margin-top: 12px;
-`;
-
-const Center = styled.View`
-  flex: 1;
-  justify-content: center;
-  align-items: center;
-  background: #121212;
-`;
-
-const Header = styled.View`
-  flex-direction: row;
-  margin-bottom: 16px;
-`;
-
+const Container = styled.View`flex: 1; background: #121212; padding: 24px;`;
+const ScrollView = styled.ScrollView`margin-top: 12px;`;
+const Center = styled.View`flex: 1; justify-content: center; align-items: center; background: #121212;`;
+const Header = styled.View`flex-direction: row; margin-bottom: 16px;`;
 const BackBtn = styled.TouchableOpacity`padding: 12px;`;
 const BackTxt = styled.Text`color: #fff; font-size: 36px;`;
-
 const InfoBox = styled.View`margin-bottom: 24px;`;
 const BankTxt = styled.Text`color: #aaa; font-size: 14px;`;
 const NumTxt  = styled.Text`color: #666; font-size: 14px; margin-top: 2px;`;
 const BalTxt  = styled.Text`color: #fff; font-size: 32px; font-weight: bold; margin-top: 4px;`;
-
-const TabRow = styled.View`
-  flex-direction: row;
-  justify-content: space-around;
-  margin-bottom: 8px;
-`;
-
+const TabRow = styled.View`flex-direction: row; justify-content: space-around; margin-bottom: 8px;`;
 const TabButton = styled.TouchableOpacity<{ active: boolean }>`
   padding: 10px 16px;
   border-bottom-width: 2px;
   border-bottom-color: ${({ active }) => (active ? '#00c471' : 'transparent')};
 `;
-
 const TabText = styled.Text<{ active: boolean }>`
   color: ${({ active }) => (active ? '#00c471' : '#aaa')};
   font-weight: bold;
   font-size: 16px;
 `;
-
-const Txn = styled.View`
-  padding: 16px 0;
-  border-bottom-width: 1px;
-  border-bottom-color: #333;
-`;
-
-const Row = styled.View`
-  flex-direction: row;
-  justify-content: space-between;
-`;
-
+const Txn = styled.View`padding: 16px 0; border-bottom-width: 1px; border-bottom-color: #333;`;
+const Row = styled.View`flex-direction: row; justify-content: space-between;`;
 const Label = styled.Text`color: #ddd; font-size: 15px;`;
-
-const Amt = styled.Text<{ pos: boolean }>`
-  color: ${({ pos }) => (pos ? '#4da6ff' : '#f44336')};
-  font-size: 15px;
-`;
-
+const Amt = styled.Text<{ pos: boolean }>`color: ${({ pos }) => (pos ? '#4da6ff' : '#f44336')}; font-size: 15px;`;
 const ActBtn = styled.TouchableOpacity`
-  flex: 1;
-  background: #1f4fff;
-  margin: 0 4px;
-  padding: 14px 0;
-  border-radius: 12px;
-  align-items: center;
+  flex: 1; background: #1f4fff; margin: 0 4px; padding: 14px 0; border-radius: 12px; align-items: center;
 `;
-
 const ActTxt = styled.Text`color: #fff; font-weight: bold; font-size: 16px;`;

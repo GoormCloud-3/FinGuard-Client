@@ -1,4 +1,3 @@
-// screens/CreateAccountScreen.tsx
 import React, { useState } from 'react';
 import { Alert } from 'react-native';
 import styled from 'styled-components/native';
@@ -6,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { API_URL } from '@env';
 import { RootStackParamList } from '../types';
+import { sanitizeName } from '../src/security/sanitize'; 
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAccount'>;
 
@@ -14,8 +14,11 @@ export default function CreateAccountScreen({ navigation }: Props) {
   const [bankName, setBankName] = useState('');
 
   const handleCreate = async () => {
-    if (!accountName.trim() || !bankName.trim()) {
-      Alert.alert('모든 필드를 입력해주세요.');
+    const safeBank = sanitizeName(bankName, 30);
+    const safeAcc  = sanitizeName(accountName, 30);
+
+    if (!safeBank.trim() || !safeAcc.trim()) {
+      Alert.alert('입력 오류', '은행명과 통장 이름은 한글/영문과 공백만 가능합니다.');
       return;
     }
 
@@ -25,26 +28,22 @@ export default function CreateAccountScreen({ navigation }: Props) {
       return;
     }
 
-    const payload = {
-      userSub,
-      accountName: accountName.trim(),
-      bankName: bankName.trim(),
-    };
+    const payload = { userSub, accountName: safeAcc.trim(), bankName: safeBank.trim() };
 
     try {
-      const res = await fetch(
-        `${API_URL}/financial/createAccounts`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`${API_URL}/financial/createAccounts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-      const json = await res.json(); // ✅ 응답 JSON 추출
-
+      // 서버 에러 문구 일반화
       if (!res.ok) {
-        const errMsg = json?.message || `서버 오류: ${res.status}`;
+        let errMsg = '요청을 처리할 수 없습니다. 잠시 후 다시 시도해주세요.';
+        try {
+          const json = await res.json();
+          if (json?.message && typeof json.message === 'string') errMsg = '통장 생성에 실패했습니다.';
+        } catch {}
         throw new Error(errMsg);
       }
 
@@ -66,7 +65,8 @@ export default function CreateAccountScreen({ navigation }: Props) {
         placeholder="예: 국민은행"
         placeholderTextColor="#888"
         value={bankName}
-        onChangeText={setBankName}
+        onChangeText={(t) => setBankName(sanitizeName(t, 30))} // ✅ 적용
+        autoCapitalize="none"
       />
 
       <Label>통장 이름</Label>
@@ -74,7 +74,8 @@ export default function CreateAccountScreen({ navigation }: Props) {
         placeholder="예: 생활비 통장"
         placeholderTextColor="#888"
         value={accountName}
-        onChangeText={setAccountName}
+        onChangeText={(t) => setAccountName(sanitizeName(t, 30))} // ✅ 적용
+        autoCapitalize="none"
       />
 
       <CreateBtn onPress={handleCreate}>
@@ -84,42 +85,14 @@ export default function CreateAccountScreen({ navigation }: Props) {
   );
 }
 
-/* ───────── 스타일 ───────── */
-const Container = styled.SafeAreaView`
-  flex: 1;
-  background: #121212;
-  padding: 24px;
-`;
 
-const Title = styled.Text`
-  font-size: 24px;
-  color: #fff;
-  margin-bottom: 24px;
-`;
-
-const Label = styled.Text`
-  color: #ccc;
-  font-size: 14px;
-  margin-bottom: 4px;
-`;
-
+const Container = styled.SafeAreaView`flex: 1; background: #121212; padding: 24px;`;
+const Title = styled.Text`font-size: 24px; color: #fff; margin-bottom: 24px;`;
+const Label = styled.Text`color: #ccc; font-size: 14px; margin-bottom: 4px;`;
 const Input = styled.TextInput`
-  background: #1e1e1e;
-  color: #fff;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 20px;
+  background: #1e1e1e; color: #fff; padding: 12px; border-radius: 10px; margin-bottom: 20px;
 `;
-
 const CreateBtn = styled.TouchableOpacity`
-  background: #007aff;
-  padding: 14px;
-  border-radius: 10px;
-  align-items: center;
+  background: #007aff; padding: 14px; border-radius: 10px; align-items: center;
 `;
-
-const CreateTxt = styled.Text`
-  color: #fff;
-  font-size: 16px;
-  font-weight: bold;
-`;
+const CreateTxt = styled.Text`color: #fff; font-size: 16px; font-weight: bold;`;
