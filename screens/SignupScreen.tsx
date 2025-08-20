@@ -213,7 +213,7 @@ export default function SignupScreen() {
       {addrErr ? <ErrText>{addrErr}</ErrText> : null}
 
       <Button onPress={handleNext} disabled={!canSubmit}>
-        <ButtonText>{canSubmit ? '다음' : '입력 확인'}</ButtonText>
+        <ButtonText>{canSubmit ? '다음' : '회원가입'}</ButtonText>
       </Button>
     </Container>
   );
@@ -238,14 +238,19 @@ const Title = styled.Text`
   color: #fff;
   margin-bottom: 32px;
 `;
-const Input = styled.TextInput`
+const Input = styled.TextInput.attrs(() => ({
+  placeholderTextColor: 'rgba(255,255,255,0.7)',
+}))`
   background-color: #1e1e1e;
-  color: #fff;
+  color: #ffffff;
   padding: 16px;
   border-radius: 12px;
   font-size: 16px;
+
+  border: 1px solid #3a3a3a;
+
+
   margin-bottom: 6px;
-  border: 1px solid #2e2e2e;
 `;
 const ErrText = styled.Text`
   color: #ff7676;

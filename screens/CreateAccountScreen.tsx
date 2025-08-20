@@ -65,7 +65,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
         placeholder="예: 국민은행"
         placeholderTextColor="#888"
         value={bankName}
-        onChangeText={(t) => setBankName(sanitizeName(t, 30))} // ✅ 적용
+        onChangeText={(t) => setBankName(sanitizeName(t, 30))} // 적용
         autoCapitalize="none"
       />
 
@@ -74,7 +74,7 @@ export default function CreateAccountScreen({ navigation }: Props) {
         placeholder="예: 생활비 통장"
         placeholderTextColor="#888"
         value={accountName}
-        onChangeText={(t) => setAccountName(sanitizeName(t, 30))} // ✅ 적용
+        onChangeText={(t) => setAccountName(sanitizeName(t, 30))} // 적용
         autoCapitalize="none"
       />
 

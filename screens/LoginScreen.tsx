@@ -10,7 +10,7 @@ import { signIn } from '../src/cognito';
 import messaging from '@react-native-firebase/messaging';
 import { saveFcmToken, deleteFcmToken } from '../src/secureStorage';
 import * as Keychain from 'react-native-keychain';
-import { sendFcmTokenToLambda } from '../src/api/sendFcmToken';
+import { sendFcmTokenToApi } from '../src/api/sendFcmToken';
 
 type Props = { setIsLoggedIn: (v: boolean) => void };
 type LoginNavProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -109,7 +109,7 @@ export default function LoginScreen({ setIsLoggedIn }: Props) {
 
       // 6. Lambda에 FCM 토큰 전송
       try {
-        await sendFcmTokenToLambda(newToken, sub);
+        await sendFcmTokenToApi(newToken, sub);
         console.log('✅ FCM 토큰을 Lambda에 성공적으로 전송했습니다.');
       } catch (err) {
         console.error('❌ Lambda 전송 실패:', err);
