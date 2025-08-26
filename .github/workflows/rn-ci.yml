@@ -1,0 +1,78 @@
+name: RN Android CI
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+    paths:
+      - "android/**"
+      - "app/**"
+      - "src/**"
+      - "package.json"
+      - "yarn.lock"
+      - "package-lock.json"
+  push:
+    branches: [ dev ]
+    paths:
+      - "android/**"
+      - "app/**"
+      - "src/**"
+      - "package.json"
+      - "yarn.lock"
+      - "package-lock.json"
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: rn-ci-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      
+      - uses: gradle/wrapper-validation-action@v2
+
+     
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Unit test
+        run: npm test --if-present -- --ci
+
+      
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+     
+      - name: Enable Gradle cache
+        uses: gradle/gradle-build-action@v2
+
+      - name: Build Android (debug)
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7

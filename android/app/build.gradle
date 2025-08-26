@@ -21,6 +21,10 @@ android {
         targetSdk 35
         versionCode 1
         versionName "1.0"
+        def vc = (project.findProperty("versionCode") ?: "1") as String
+    def vn = (project.findProperty("versionName") ?: "1.0.0") as String
+    versionCode vc.toInteger()
+    versionName vn
     }
 
     signingConfigs {
