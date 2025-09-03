@@ -19,12 +19,14 @@ android {
         applicationId "com.finguard"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
-        def vc = (project.findProperty("versionCode") ?: "1") as String
-    def vn = (project.findProperty("versionName") ?: "1.0.0") as String
-    versionCode vc.toInteger()
-    versionName vn
+
+        // ---- 버전: CI에서 -PVERSION_CODE / -PVERSION_NAME로 주입 가능 ----
+        def vc = (project.findProperty("VERSION_CODE")
+                ?: project.findProperty("versionCode") ?: "1") as String
+        def vn = (project.findProperty("VERSION_NAME")
+                ?: project.findProperty("versionName") ?: "1.0.0") as String
+        versionCode vc.toInteger()
+        versionName vn
     }
 
     signingConfigs {
@@ -34,14 +36,33 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+
+        // ---- 릴리즈 서명: 환경변수 기반 (CI/CD에서 주입) ----
+        release {
+            // ANDROID_KEYSTORE_PATH가 없으면 로컬의 release.keystore 사용
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "release.keystore"
+            storeFile file(ksPath)
+            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+            keyPassword System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+
+            // PKCS12 사용 시: ANDROID_KEYSTORE_TYPE=pkcs12
+            def ksType = System.getenv("ANDROID_KEYSTORE_TYPE")
+            if (ksType != null && ksType.trim()) {
+                storeType ksType
+            }
+        }
     }
 
     buildTypes {
         debug   { signingConfig signingConfigs.debug }
 
         release {
-            signingConfig signingConfigs.debug            
+            // 릴리즈는 실제 릴리즈 키로 서명
+            signingConfig signingConfigs.release
+
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
                           "proguard-rules.pro"
         }
