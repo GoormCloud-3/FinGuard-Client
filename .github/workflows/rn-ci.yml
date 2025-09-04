@@ -55,16 +55,27 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # SDK만 세팅
+      # Android SDK만 설치
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 필요한 패키지 직접 설치 (CI는 NDK 보통 불필요)
+      # 라이선스 수락 + 필요한 SDK 패키지 설치 (NDK 불필요)
       - name: Accept licenses and install SDK packages
         shell: bash
+        env:
+          SDKMANAGER: "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
         run: |
-          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses
-          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install \
+          set -e
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          echo "Using sdkmanager at: $SDKMANAGER"
+          "$SDKMANAGER" --version || true
+
+          # yes | sdkmanager SIGPIPE로 인한 실패 방지
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses || true
+          set -o pipefail
+
+          "$SDKMANAGER" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
