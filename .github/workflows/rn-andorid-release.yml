@@ -55,28 +55,48 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # Android SDK만 설치 (패키지 자동설치 안 함)
+      # Android SDK만 설치
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 라이선스 수락 + 필요한 패키지 설치
+      # 라이선스 수락 + 필요한 패키지 설치 (sdkmanager 경로 자동 탐색)
       - name: Accept licenses and install SDK packages
         shell: bash
-        env:
-          SDKMANAGER: "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
         run: |
-          set -e
+          set -euo pipefail
           echo "ANDROID_HOME=${ANDROID_HOME}"
-          echo "Using sdkmanager at: $SDKMANAGER"
-          "$SDKMANAGER" --version || true
 
-          # yes | sdkmanager SIGPIPE 방지 (pipefail 잠시 해제) + latest 사용 금지
+          # sdkmanager 경로 자동 탐색
+          CANDIDATES=(
+            "${ANDROID_HOME}/cmdline-tools/17.0/bin/sdkmanager"
+            "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
+            "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+            "${ANDROID_HOME}/cmdline-tools/bin/sdkmanager"
+            "$(command -v sdkmanager || true)"
+          )
+          SDKMANAGER=""
+          for c in "${CANDIDATES[@]}"; do
+            if [ -n "${c}" ] && [ -x "${c}" ]; then
+              SDKMANAGER="${c}"
+              break
+            fi
+          done
+          if [ -z "${SDKMANAGER}" ]; then
+            echo "::error::sdkmanager not found under ${ANDROID_HOME}. Listing cmdline-tools..."
+            ls -R "${ANDROID_HOME}/cmdline-tools" || true
+            exit 1
+          fi
+
+          echo "Using sdkmanager at: ${SDKMANAGER}"
+          "${SDKMANAGER}" --version || true
+
+          # yes 파이프 SIGPIPE 경고를 실패로 취급하지 않도록 pipefail 잠시 해제
           set +o pipefail
-          yes | "$SDKMANAGER" --licenses || true
+          yes | "${SDKMANAGER}" --licenses || true
           set -o pipefail
 
-          # 필요한 패키지 각각의 인자로 설치
-          "$SDKMANAGER" --install \
+          # 필요한 패키지 각각 인자로 설치
+          "${SDKMANAGER}" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
