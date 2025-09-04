@@ -3,7 +3,7 @@ name: RN Android Release
 on:
   push:
     tags:
-      - "v*"          
+      - "v*"
   workflow_dispatch:
     inputs:
       version_strategy:
@@ -11,7 +11,7 @@ on:
         required: false
         default: "tag"
       release_notes:
-        description: "릴리즈 노트(선택)"
+        description: "릴리즈 노트"
         required: false
         default: "Automated release build"
 
@@ -65,11 +65,11 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"      # v1.2.3
             NAME="${TAG#v}"                     # 1.2.3
-            # 1.2.3 -> 10203 형태 + 런넘버 일부 가산(증가 보장)
-            CODE=$(echo $NAME | awk -F. '{printf("%d%02d%02d\n",$1,$2,$3)}')
+            BASE="${NAME%%-*}"                  # prerelease 잘라냄 (rc 등)
+            IFS='.' read -r MA MI PA <<< "$BASE"
+            CODE=$(printf "%d%02d%02d\n" "$MA" "$MI" "$PA")
             CODE=$((CODE*100 + ${{ github.run_number }} % 100))
           else
-            # 수동 실행 또는 비태그 → run_number 기반
             NAME="0.1.${{ github.run_number }}"
             CODE=$((10000 + $GITHUB_RUN_NUMBER))
           fi
@@ -79,10 +79,15 @@ jobs:
           echo "version_code=$CODE" >> $GITHUB_OUTPUT
           echo "Computed VERSION_NAME=$NAME, VERSION_CODE=$CODE"
 
+      # --- gradlew 실행권한 부여 (권한 오류 방지) ---
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
       # --- 릴리즈 빌드 (APK) ---
       - name: Build Android (release APK)
         working-directory: android
-        run: ./gradlew --no-daemon clean assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME
+        run: ./gradlew --no-daemon clean assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME --stacktrace --info
 
       # 산출물 업로드
       - name: Upload release APK
