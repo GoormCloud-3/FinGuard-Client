@@ -5,18 +5,32 @@ buildscript {
         compileSdkVersion = 35
         targetSdkVersion = 35
         ndkVersion = "27.1.12297006"
-        kotlinVersion = "2.1.20"
+        kotlinVersion = "2.1.20"   // app 모듈에서 사용 시 참고용
     }
+
+    
+    repositories {
+        google()
+        mavenCentral()
+     
+    }
+
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.10.1"
+        classpath "com.google.gms:google-services:4.4.1" 
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20"
+
+ 
+    }
+}
+
+
+allprojects {
     repositories {
         google()
         mavenCentral()
     }
-    dependencies {
-        classpath('com.android.tools.build:gradle:8.10.1')
-        classpath("com.google.gms:google-services:4.4.1") 
-        classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20")
-    }
 }
 
+// RN 루트 플러그인 적용 (유지)
 apply plugin: "com.facebook.react.rootproject"
