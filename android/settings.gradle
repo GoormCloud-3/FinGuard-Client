@@ -12,7 +12,6 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-  // 프로젝트/모듈에서 repo 추가 금지하고 여기 선언만 허용
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
   repositories {
     google()
