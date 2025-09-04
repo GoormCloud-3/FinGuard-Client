@@ -21,6 +21,11 @@ if (!rnVersion) {
 
 def rnAarVersion = rnVersion.replaceAll(/-.+$/, "")
 
+
+react {
+  autolinkLibrariesWithApp()
+}
+
 android {
   namespace "com.finguard"
 
