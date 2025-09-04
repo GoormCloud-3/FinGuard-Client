@@ -5,11 +5,7 @@ plugins {
   id("com.google.gms.google-services")
 }
 
-/**
- * 설치된 React Native 버전을 추출한다.
- * -P REACT_NATIVE_VERSION > node_modules/react-native/package.json > fallback 순서
- * 만약 0.80.0-rc 같은 pre-release면 Maven 좌표가 없는 경우가 있어 suffix 제거
- */
+
 def rnVersion = providers.gradleProperty("REACT_NATIVE_VERSION").orNull
 if (!rnVersion) {
   def pkg = file("$rootDir/../node_modules/react-native/package.json")
@@ -19,10 +15,10 @@ if (!rnVersion) {
   }
 }
 if (!rnVersion) {
-  rnVersion = "0.75.3" // 최후 fallback (프로젝트에 맞게 조정 가능)
+  rnVersion = "0.75.3" 
   logger.lifecycle("REACT_NATIVE_VERSION not provided; falling back to ${rnVersion}")
 }
-// pre-release 태그 제거 (ex: 0.80.0-rc.0 -> 0.80.0)
+
 def rnAarVersion = rnVersion.replaceAll(/-.+$/, "")
 
 android {
@@ -34,7 +30,8 @@ android {
 
   defaultConfig {
     applicationId "com.finguard"
-    minSdkVersion 23
+  
+    minSdkVersion 24
     targetSdkVersion 35
 
     versionCode project.hasProperty("VERSION_CODE") ? project.VERSION_CODE.toInteger() : 1
@@ -79,7 +76,6 @@ dependencies {
   } else {
     implementation("io.github.react-native-community:jsc-android:250230.2.1")
   }
-
 
   implementation("com.google.android.gms:play-services-base:18.5.0")
   implementation("com.google.android.gms:play-services-location:21.2.0")
