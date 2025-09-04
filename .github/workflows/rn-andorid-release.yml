@@ -55,14 +55,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
+      # cmdline-tools만 설치/업데이트 (패키지는 아래에서 직접 설치)
+      - name: Setup Android SDK (base)
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-            ndk;27.1.12297006
+
+      # ✅ 패키지 직접 설치 (줄바꿈/인자 병합 이슈 회피)
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.1.12297006"
+          sdkmanager --list | sed -n '1,200p'
 
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v3
@@ -103,18 +106,16 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
-      # 🔍 러너가 실제로 어떤 파일을 읽는지 눈으로 확인
+      # 🔍 실제 러너가 읽는 파일/속성 확인
       - name: Print app/build.gradle on runner
         run: |
           echo "===== android/app/build.gradle ====="
-          sed -n '1,180p' android/app/build.gradle
+          sed -n '1,200p' android/app/build.gradle
 
-      # 🔍 AGP가 인식한 속성 확인 (compileSdk 보이게)
       - name: Print :app properties
         working-directory: android
         run: ./gradlew -q :app:properties || true
 
-      # 오토링킹 입력 폴더 선생성 (안전망)
       - name: Prepare autolinking dir
         run: mkdir -p android/build/generated/autolinking
 

@@ -59,14 +59,15 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
+      - name: Setup Android SDK (base)
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-            ndk;27.1.12297006
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.1.12297006"
+          sdkmanager --list | sed -n '1,120p'
 
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v3
@@ -78,7 +79,7 @@ jobs:
       - name: Print app/build.gradle on runner (sanity)
         run: |
           echo "===== android/app/build.gradle ====="
-          sed -n '1,180p' android/app/build.gradle
+          sed -n '1,200p' android/app/build.gradle
 
       - name: Print :app properties (sanity)
         working-directory: android
