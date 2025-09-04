@@ -8,31 +8,25 @@ pluginManagement {
     maven { url = uri("$rootDir/../node_modules/jsc-android/dist") }
   }
 
-  // 플러그인 버전 중앙 관리
+  // 플러그인 버전 고정(권장)
   plugins {
     id("com.android.application") version "8.10.1"
     id("org.jetbrains.kotlin.android") version "2.1.20"
     id("com.google.gms.google-services") version "4.4.1"
-    id("com.facebook.react") version "0.75.4"
   }
 
-  // RN Gradle 플러그인 includeBuild
+  // RN Gradle 플러그인을 includeBuild로 연결
   includeBuild("../node_modules/@react-native/gradle-plugin")
 }
 
 dependencyResolutionManagement {
-  // 프로젝트/모듈에서 repositories 선언하면 빌드 실패 (일원화)
-  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+  // ⬇️ 여기만 변경
+  repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
   repositories {
     google()
     mavenCentral()
-
-    // RN / JSC 로컬 maven
     maven { url = uri("$rootDir/../node_modules/react-native/android") }
     maven { url = uri("$rootDir/../node_modules/jsc-android/dist") }
-
-    // 일부 라이브러리에서 필요할 수 있는 JitPack (필요 없으면 제거 가능)
-    maven { url = uri("https://www.jitpack.io") }
   }
 }
 
