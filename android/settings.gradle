@@ -1,32 +1,22 @@
-
-
 pluginManagement {
-  includeBuild("../node_modules/@react-native/gradle-plugin")
-
   repositories {
     gradlePluginPortal()
-    mavenCentral()
     google()
+    mavenCentral()
     maven { url = uri("$rootDir/../node_modules/react-native/android") }
     maven { url = uri("$rootDir/../node_modules/jsc-android/dist") }
   }
 }
 
-plugins {
-  id("com.facebook.react.settings")
-}
-
 dependencyResolutionManagement {
-
+  // RN 플러그인이 프로젝트 레벨에 repo를 추가하더라도 여기 설정이 우선
   repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-
   repositories {
-    mavenCentral()
     google()
+    mavenCentral()
     maven { url = uri("$rootDir/../node_modules/react-native/android") }
     maven { url = uri("$rootDir/../node_modules/jsc-android/dist") }
   }
 }
 
 rootProject.name = "FinGuard"
-include(":app")

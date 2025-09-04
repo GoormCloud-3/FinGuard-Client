@@ -1,36 +1,29 @@
 plugins {
-  id "com.android.application"
-  id "org.jetbrains.kotlin.android"
-  id "com.facebook.react"
-  id "com.google.gms.google-services"
+  id 'com.android.application'
+  id 'org.jetbrains.kotlin.android'
+  id 'com.facebook.react'
+  id 'com.google.gms.google-services'
 }
 
 react {
+  // RN autolink
   autolinkLibrariesWithApp()
-  // nodeExecutableAndArgs = ["/usr/bin/env", "node"] // CI에서 필요하면 주석 해제
 }
 
 android {
   namespace "com.finguard"
 
-  // AGP가 요구하는 모듈 로컬 선언
-  compileSdkVersion 35  // 또는 compileSdk 35
+  // ✅ compileSdk를 최신 DSL로 명시
+  compileSdk 35
 
   defaultConfig {
     applicationId "com.finguard"
-    minSdkVersion 24
-    targetSdkVersion 35
-
-    // CI에서 -P 로 주입 가능 (없으면 기본값 사용)
-    def vc = (project.findProperty("VERSION_CODE")
-      ?: project.findProperty("versionCode") ?: "1") as String
-    def vn = (project.findProperty("VERSION_NAME")
-      ?: project.findProperty("versionName") ?: "1.0.0") as String
-    versionCode vc.toInteger()
-    versionName vn
+    minSdk 24
+    targetSdk 35
+    versionCode 1
+    versionName "1.0.0"
   }
 
-  // JDK 17 사용 (AGP 8.x 권장)
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_17
     targetCompatibility JavaVersion.VERSION_17
@@ -39,76 +32,50 @@ android {
     jvmTarget = "17"
   }
 
-  signingConfigs {
-    debug {
-      storeFile file('debug.keystore')
-      storePassword 'android'
-      keyAlias 'androiddebugkey'
-      keyPassword 'android'
-    }
+  buildTypes {
+    debug { signingConfig signingConfigs.debug }
     release {
-      def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "release.keystore"
-      storeFile file(ksPath)
-      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-      keyAlias System.getenv("ANDROID_SIGNING_KEY_ALIAS")
-      keyPassword System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
-      def ksType = System.getenv("ANDROID_KEYSTORE_TYPE")
-      if (ksType != null && ksType.trim()) storeType ksType
+      minifyEnabled false
+      shrinkResources false
+      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
     }
   }
 
-  buildTypes {
-    debug   { signingConfig signingConfigs.debug }
-    release {
-      signingConfig signingConfigs.release
-      minifyEnabled false
-      shrinkResources false
-      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro"
+  packaging {
+    resources {
+      pickFirsts += ["**/*.so", "META-INF/*"]
     }
   }
 }
 
 dependencies {
+
   implementation "com.facebook.react:react-android"
 
-  // Google Play Services 버전 정합
-  implementation "com.google.android.gms:play-services-base:18.5.0"
-  implementation "com.google.android.gms:play-services-tasks:18.0.2"
-  implementation "com.google.android.gms:play-services-location:21.2.0"
-
-  // Firebase (예시)
-  implementation "com.google.firebase:firebase-messaging:23.4.0"
-
-  // JS 엔진 선택
-  if (hermesEnabled.toBoolean()) {
+  def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
+  if (hermesEnabled) {
     implementation "com.facebook.react:hermes-android"
   } else {
-    implementation "io.github.react-native-community:jsc-android:2026004.+"
+    implementation "io.github.react-native-community:jsc-android:250230.2.1"
   }
+
+  // 필요한 경우에만 추가
+  implementation "com.google.android.gms:play-services-base:18.5.0"
+  implementation "com.google.android.gms:play-services-location:21.2.0"
+  implementation "com.google.firebase:firebase-messaging:23.4.0"
 }
 
-/* 모든 서브모듈에도 동일 버전 강제(충돌 예방) */
-subprojects {
-  configurations.all {
-    resolutionStrategy {
-      force "com.google.android.gms:play-services-base:18.5.0"
-      force "com.google.android.gms:play-services-tasks:18.0.2"
-      force "com.google.android.gms:play-services-location:21.2.0"
-    }
-  }
-}
-
-/* ── RN autolinking 파일 생성 순서 보정 ── */
+/** 오토링킹 입력 파일 생성 타이밍 보정 (CI/Windows 간헐 이슈 회피) */
 def autolinkDir = file("$rootDir/build/generated/autolinking")
 tasks.register("prepareAutolinkingDir") {
   doLast { if (!autolinkDir.exists()) autolinkDir.mkdirs() }
 }
 gradle.projectsEvaluated {
   def genJsonTask =
-    tasks.findByName("generateAutolinkingJson") ?:
-    tasks.findByName("generateAutolinking") ?:
-    tasks.findByName("reactNativeConfig")
+      tasks.findByName("generateAutolinkingJson") ?:
+      tasks.findByName("generateAutolinking") ?:
+      tasks.findByName("reactNativeConfig")
+
   def genNewArchTask = tasks.findByName("generateAutolinkingNewArchitectureFiles")
 
   if (genJsonTask) {

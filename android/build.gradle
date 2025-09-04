@@ -1,5 +1,4 @@
 
-
 buildscript {
     ext {
         buildToolsVersion = "35.0.0"
@@ -10,17 +9,13 @@ buildscript {
         kotlinVersion = "2.1.20"
     }
 
- 
+
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.10.1")
         classpath("com.google.gms:google-services:4.4.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20")
-
     }
 }
-
