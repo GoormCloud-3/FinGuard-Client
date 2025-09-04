@@ -147,11 +147,13 @@ export default function EnterAmountScreen() {
           <Prompt>{amount ? '보낼 금액' : '얼마나 보낼까요?'}</Prompt>
           <AmtBox>₩ {formatted}</AmtBox>
 
-          <Pad>
-            {['1','2','3','4','5','6','7','8','9','0','←'].map(k => (
-              <PadBtn key={k} onPress={() => onKey(k)}>
-                <PadTxt>{k}</PadTxt>
-              </PadBtn>
+         <Pad>
+            {['1','2','3','4','5','6','7','8','9','0','←'].map((k) => (
+              <React.Fragment key={k}>
+                <PadBtn onPress={() => onKey(k)}>
+                  <PadTxt>{k}</PadTxt>
+                </PadBtn>
+              </React.Fragment>
             ))}
           </Pad>
 
