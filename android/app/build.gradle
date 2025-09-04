@@ -20,11 +20,12 @@ android {
   ndkVersion rootProject.ext.ndkVersion
 
   defaultConfig {
-    applicationId "com.finguard"
-    minSdk 24
-    targetSdk 35
-    versionCode (project.findProperty("VERSION_CODE") ?: 1) as Integer
-    versionName (project.findProperty("VERSION_NAME") ?: "1.0.0") as String
+     applicationId "com.finguard"   // 프로젝트에 맞게
+        minSdkVersion 23               // 프로젝트 요구사항에 맞게
+        targetSdkVersion 35
+        // 워크플로우에서 넘겨주는 버전 값 사용
+        versionCode project.hasProperty('VERSION_CODE') ? project.VERSION_CODE.toInteger() : 1
+        versionName project.hasProperty('VERSION_NAME') ? project.VERSION_NAME : "0.1.0"
   }
 
   compileOptions {
