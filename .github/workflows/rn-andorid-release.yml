@@ -22,10 +22,6 @@ jobs:
       group: rn-release-${{ github.ref }}
       cancel-in-progress: true
 
-    env:
-      JAVA_TOOL_OPTIONS: -Xmx3g
-      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
-
     steps:
       - uses: actions/checkout@v4
 
@@ -46,7 +42,11 @@ jobs:
 
       - name: Verify RN gradle plugin exists
         run: |
-          test -d node_modules/@react-native/gradle-plugin
+          if [ ! -d "node_modules/@react-native/gradle-plugin" ]; then
+            echo "node_modules/@react-native/gradle-plugin 폴더가 없습니다. package.json 위치/설치 위치를 확인하세요."
+            exit 1
+          fi
+          echo "RN gradle plugin found:"
           ls -la node_modules/@react-native/gradle-plugin
 
       - name: Setup Java 17
@@ -55,20 +55,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # cmdline-tools만 설치/업데이트 (패키지는 아래에서 직접 설치)
-      - name: Setup Android SDK (base)
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+            ndk;27.1.12297006
 
-      # ✅ 패키지 직접 설치 (줄바꿈/인자 병합 이슈 회피)
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.1.12297006"
-          sdkmanager --list | sed -n '1,200p'
-
-      - name: Setup Gradle cache
-        uses: gradle/actions/setup-gradle@v3
+      - name: Enable Gradle cache
+        uses: gradle/gradle-build-action@v2
 
       - name: Restore keystore from secret
         run: |
@@ -106,26 +103,9 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
-      # 🔍 실제 러너가 읽는 파일/속성 확인
-      - name: Print app/build.gradle on runner
-        run: |
-          echo "===== android/app/build.gradle ====="
-          sed -n '1,200p' android/app/build.gradle
-
-      - name: Print :app properties
-        working-directory: android
-        run: ./gradlew -q :app:properties || true
-
-      - name: Prepare autolinking dir
-        run: mkdir -p android/build/generated/autolinking
-
       - name: Build Android (release APK)
         working-directory: android
-        run: |
-          ./gradlew --stop
-          ./gradlew --no-configuration-cache --refresh-dependencies clean assembleRelease \
-            -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME \
-            --stacktrace --warning-mode all
+        run: ./gradlew --no-daemon clean assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME --stacktrace --info
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4

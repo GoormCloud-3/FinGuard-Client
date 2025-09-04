@@ -27,10 +27,6 @@ jobs:
       group: rn-ci-${{ github.ref }}
       cancel-in-progress: true
 
-    env:
-      JAVA_TOOL_OPTIONS: -Xmx3g
-      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
-
     steps:
       - uses: actions/checkout@v4
 
@@ -59,41 +55,20 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK (base)
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
 
-      - name: Install Android SDK packages
-        shell: bash
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.1.12297006"
-          sdkmanager --list | sed -n '1,120p'
-
-      - name: Setup Gradle cache
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Make gradlew executable
-        working-directory: android
-        run: chmod +x gradlew
-
-      - name: Print app/build.gradle on runner (sanity)
-        run: |
-          echo "===== android/app/build.gradle ====="
-          sed -n '1,200p' android/app/build.gradle
-
-      - name: Print :app properties (sanity)
-        working-directory: android
-        run: ./gradlew -q :app:properties || true
-
-      - name: Prepare autolinking dir
-        run: mkdir -p android/build/generated/autolinking
+      - name: Enable Gradle cache
+        uses: gradle/gradle-build-action@v2
 
       - name: Build Android (debug)
         working-directory: android
-        run: |
-          ./gradlew --stop
-          ./gradlew --no-configuration-cache --refresh-dependencies clean assembleDebug \
-            --stacktrace --warning-mode all
+        run: ./gradlew --no-daemon assembleDebug
 
       - name: Upload debug APK
         if: always()
