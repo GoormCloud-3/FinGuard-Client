@@ -13,8 +13,10 @@ react {
 android {
   namespace "com.finguard"
 
-  // ✅ compileSdk를 최신 DSL로 명시
+  // SDK/도구 버전
   compileSdk 35
+  buildToolsVersion rootProject.ext.buildToolsVersion
+  ndkVersion rootProject.ext.ndkVersion
 
   defaultConfig {
     applicationId "com.finguard"
@@ -43,13 +45,15 @@ android {
 
   packaging {
     resources {
-      pickFirsts += ["**/*.so", "META-INF/*"]
+
+      pickFirsts += ["META-INF/*"]
     }
   }
 }
 
 dependencies {
-
+  // RN BOM으로 내부 모듈 버전 정합성 보장 (RN 버전에 맞춰 조정 가능)
+  implementation(platform("com.facebook.react:react-native-bom:0.75.4"))
   implementation "com.facebook.react:react-android"
 
   def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
@@ -59,7 +63,7 @@ dependencies {
     implementation "io.github.react-native-community:jsc-android:250230.2.1"
   }
 
-  // 필요한 경우에만 추가
+  // 필요한 경우에만 유지
   implementation "com.google.android.gms:play-services-base:18.5.0"
   implementation "com.google.android.gms:play-services-location:21.2.0"
   implementation "com.google.firebase:firebase-messaging:23.4.0"
@@ -68,8 +72,11 @@ dependencies {
 /** 오토링킹 입력 파일 생성 타이밍 보정 (CI/Windows 간헐 이슈 회피) */
 def autolinkDir = file("$rootDir/build/generated/autolinking")
 tasks.register("prepareAutolinkingDir") {
-  doLast { if (!autolinkDir.exists()) autolinkDir.mkdirs() }
+  doLast {
+    if (!autolinkDir.exists()) autolinkDir.mkdirs()
+  }
 }
+
 gradle.projectsEvaluated {
   def genJsonTask =
       tasks.findByName("generateAutolinkingJson") ?:
@@ -86,3 +93,5 @@ gradle.projectsEvaluated {
     genNewArchTask.dependsOn(genJsonTask)
   }
 }
+
+
