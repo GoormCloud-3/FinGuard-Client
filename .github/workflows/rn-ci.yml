@@ -55,61 +55,45 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # Android SDK만 설치
+      # SDK만 세팅
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 라이선스 수락 + 필요한 SDK 패키지 설치 (NDK 불필요)
+      # 필요한 패키지 직접 설치 (CI는 NDK 보통 불필요)
       - name: Accept licenses and install SDK packages
         shell: bash
         run: |
           set -euo pipefail
-          echo "ANDROID_HOME=${ANDROID_HOME}"
-
-          CANDIDATES=(
-            "${ANDROID_HOME}/cmdline-tools/17.0/bin/sdkmanager"
-            "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
-            "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-            "${ANDROID_HOME}/cmdline-tools/bin/sdkmanager"
-            "$(command -v sdkmanager || true)"
-          )
-          SDKMANAGER=""
-          for c in "${CANDIDATES[@]}"; do
-            if [ -n "${c}" ] && [ -x "${c}" ]; then
-              SDKMANAGER="${c}"
-              break
-            fi
-          done
-          if [ -z "${SDKMANAGER}" ]; then
-            echo "::error::sdkmanager not found under ${ANDROID_HOME}. Listing cmdline-tools..."
-            ls -R "${ANDROID_HOME}/cmdline-tools" || true
-            exit 1
-          fi
-
-          echo "Using sdkmanager at: ${SDKMANAGER}"
-          "${SDKMANAGER}" --version || true
-
-          set +o pipefail
-          yes | "${SDKMANAGER}" --licenses || true
-          set -o pipefail
-
-          "${SDKMANAGER}" --install \
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      # 🔧 RN CLI로 autolinking.json 선생성
+      - name: Enable Gradle cache
+        uses: gradle/gradle-build-action@v2
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
+      # clean만 먼저
+      - name: Gradle clean
+        working-directory: android
+        run: ./gradlew --no-daemon clean
+
+      # clean 이후 autolinking.json 생성
       - name: Generate autolinking.json (RN CLI)
         run: |
           set -euo pipefail
           mkdir -p android/build/generated/autolinking
           npx --yes react-native config > android/build/generated/autolinking/autolinking.json
-          test -s android/build/generated/autolinking/autolinking.json || (echo "autolinking.json empty"; exit 1)
+          test -s android/build/generated/autolinking/autolinking.json
           echo "autolinking.json generated"
+          ls -la android/build/generated/autolinking
+          head -n 3 android/build/generated/autolinking/autolinking.json || true
 
-      - name: Enable Gradle cache
-        uses: gradle/gradle-build-action@v2
-
+      # assemble만
       - name: Build Android (debug)
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug

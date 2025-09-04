@@ -55,45 +55,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # Android SDK만 설치
+      # 1) ANDROID SDK만 세팅 (패키지 자동설치 안 씀)
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 라이선스 수락 + 필요한 패키지 설치 (sdkmanager 경로 자동 탐색)
+      # 2) 라이선스 수락 + 필요한 패키지 직접 설치 (패키지들을 '각각의 인자'로 전달)
       - name: Accept licenses and install SDK packages
         shell: bash
         run: |
           set -euo pipefail
-          echo "ANDROID_HOME=${ANDROID_HOME}"
-
-          CANDIDATES=(
-            "${ANDROID_HOME}/cmdline-tools/17.0/bin/sdkmanager"
-            "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
-            "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-            "${ANDROID_HOME}/cmdline-tools/bin/sdkmanager"
-            "$(command -v sdkmanager || true)"
-          )
-          SDKMANAGER=""
-          for c in "${CANDIDATES[@]}"; do
-            if [ -n "${c}" ] && [ -x "${c}" ]; then
-              SDKMANAGER="${c}"
-              break
-            fi
-          done
-          if [ -z "${SDKMANAGER}" ]; then
-            echo "::error::sdkmanager not found under ${ANDROID_HOME}. Listing cmdline-tools..."
-            ls -R "${ANDROID_HOME}/cmdline-tools" || true
-            exit 1
-          fi
-
-          echo "Using sdkmanager at: ${SDKMANAGER}"
-          "${SDKMANAGER}" --version || true
-
-          set +o pipefail
-          yes | "${SDKMANAGER}" --licenses || true
-          set -o pipefail
-
-          "${SDKMANAGER}" --install \
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
@@ -134,22 +106,30 @@ jobs:
           echo "version_code=$CODE" >> $GITHUB_OUTPUT
           echo "Computed VERSION_NAME=$NAME, VERSION_CODE=$CODE"
 
-      # 🔧 RN CLI로 autolinking.json 선생성 (플러그인이 기대하는 경로)
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
+      # clean만 먼저 수행
+      - name: Gradle clean
+        working-directory: android
+        run: ./gradlew --no-daemon clean
+
+      # clean 이후 RN CLI로 autolinking.json 생성
       - name: Generate autolinking.json (RN CLI)
         run: |
           set -euo pipefail
           mkdir -p android/build/generated/autolinking
           npx --yes react-native config > android/build/generated/autolinking/autolinking.json
-          test -s android/build/generated/autolinking/autolinking.json || (echo "autolinking.json empty"; exit 1)
+          test -s android/build/generated/autolinking/autolinking.json
           echo "autolinking.json generated"
+          ls -la android/build/generated/autolinking
+          head -n 3 android/build/generated/autolinking/autolinking.json || true
 
-      - name: Make gradlew executable
-        working-directory: android
-        run: chmod +x gradlew
-
+      # assemble만 수행 (clean 다시 하지 않음)
       - name: Build Android (release APK)
         working-directory: android
-        run: ./gradlew --no-daemon clean assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME --stacktrace --info
+        run: ./gradlew --no-daemon assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME --stacktrace --info
 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
