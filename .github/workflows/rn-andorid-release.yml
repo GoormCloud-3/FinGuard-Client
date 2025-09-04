@@ -33,7 +33,7 @@ jobs:
       - name: Install JS deps (root)
         run: npm ci
 
-      - name: Print env
+      - name: Print tree (root)
         run: |
           pwd
           ls -la
@@ -55,17 +55,23 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # 1) ANDROID SDK만 세팅 (패키지 자동설치 안 씀)
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: platform-tools,platforms;android-35,build-tools;35.0.0,ndk;27.1.12297006
+
+      # 2) 라이선스 수락 + 필요한 패키지 직접 설치 (패키지들을 '각각의 인자'로 전달)
+      - name: Accept licenses and install SDK packages
+        shell: bash
+        run: |
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.1.12297006"
 
       - name: Enable Gradle cache
         uses: gradle/gradle-build-action@v2
-
-      - name: Make gradlew executable
-        working-directory: android
-        run: chmod +x gradlew
 
       - name: Restore keystore from secret
         run: |
@@ -99,10 +105,9 @@ jobs:
           echo "version_code=$CODE" >> $GITHUB_OUTPUT
           echo "Computed VERSION_NAME=$NAME, VERSION_CODE=$CODE"
 
-      # 오토링킹 산출물 먼저 생성
-      - name: Generate RN autolinking (Android)
+      - name: Make gradlew executable
         working-directory: android
-        run: ./gradlew --no-daemon :app:generateAutolinkingJson --stacktrace
+        run: chmod +x gradlew
 
       - name: Build Android (release APK)
         working-directory: android
