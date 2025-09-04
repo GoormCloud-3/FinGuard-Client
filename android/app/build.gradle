@@ -1,105 +1,126 @@
+// android/app/build.gradle
 
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"
 
-plugins {
-  id "com.android.application"
-  id "org.jetbrains.kotlin.android"
-  id "com.facebook.react"
-  id "com.google.gms.google-services"
+/* RN 플러그인 */
+react {
+    autolinkLibrariesWithApp()
+
 }
 
-def hermesEnabled = (findProperty("hermesEnabled") ?: "true").toString().toBoolean()
+def enableProguardInReleaseBuilds = false
 def jscFlavor = "io.github.react-native-community:jsc-android:2026004.+"
 
 android {
-  namespace "com.finguard"
-  compileSdk 35
+    namespace "com.finguard"
+    compileSdk 35
 
-  defaultConfig {
-    applicationId "com.finguard"
-    minSdk 24
-    targetSdk 35
+    defaultConfig {
+        applicationId "com.finguard"
+        minSdk 24
+        targetSdk 35
 
-
-    def vc = (project.findProperty("VERSION_CODE")
-            ?: project.findProperty("versionCode") ?: "1") as String
-    def vn = (project.findProperty("VERSION_NAME")
-            ?: project.findProperty("versionName") ?: "1.0.0") as String
-    versionCode vc.toInteger()
-    versionName vn
-  }
-
-  signingConfigs {
-    debug {
-      storeFile file('debug.keystore')
-      storePassword 'android'
-      keyAlias 'androiddebugkey'
-      keyPassword 'android'
+        // ---- 버전: CI에서 -PVERSION_CODE / -PVERSION_NAME로 주입 가능 ----
+        def vc = (project.findProperty("VERSION_CODE")
+                ?: project.findProperty("versionCode") ?: "1") as String
+        def vn = (project.findProperty("VERSION_NAME")
+                ?: project.findProperty("versionName") ?: "1.0.0") as String
+        versionCode vc.toInteger()
+        versionName vn
     }
 
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
 
-    release {
+        // ---- 릴리즈 서명: 환경변수 기반 (CI/CD에서 주입) ----
+        release {
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "release.keystore"
+            storeFile file(ksPath)
+            storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+            keyPassword System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
 
-      def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "release.keystore"
-      storeFile file(ksPath)
-      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-      keyAlias System.getenv("ANDROID_SIGNING_KEY_ALIAS")
-      keyPassword System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
-
-      // PKCS12 사용 시: ANDROID_KEYSTORE_TYPE=pkcs12
-      def ksType = System.getenv("ANDROID_KEYSTORE_TYPE")
-      if (ksType != null && ksType.trim()) {
-        storeType ksType
-      }
+            def ksType = System.getenv("ANDROID_KEYSTORE_TYPE")
+            if (ksType != null && ksType.trim()) {
+                storeType ksType
+            }
+        }
     }
-  }
 
-  buildTypes {
-    debug { signingConfig signingConfigs.debug }
-
-    release {
-      signingConfig signingConfigs.release
-      minifyEnabled false
-      shrinkResources false
-      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
-                    "proguard-rules.pro"
+    buildTypes {
+        debug   { signingConfig signingConfigs.debug }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
+                          "proguard-rules.pro"
+        }
     }
-  }
-
-
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_17
-    targetCompatibility JavaVersion.VERSION_17
-  }
-  kotlinOptions {
-    jvmTarget = "17"
-  }
 }
 
 dependencies {
+    implementation "com.facebook.react:react-android"
 
-  implementation "com.facebook.react:react-android"
+    /* ───── Google Play-Services (위치) 한 버전으로 통일 ───── */
+    implementation "com.google.android.gms:play-services-base:18.5.0"
+    implementation "com.google.android.gms:play-services-tasks:18.0.2"
+    implementation "com.google.android.gms:play-services-location:21.2.0"
 
+    /* ───── Firebase ───── */
+    implementation "com.google.firebase:firebase-messaging:23.4.0"
 
-  implementation "com.google.android.gms:play-services-base:18.5.0"
-  implementation "com.google.android.gms:play-services-tasks:18.0.2"
-  implementation "com.google.android.gms:play-services-location:21.2.0"
+    if (hermesEnabled.toBoolean()) {
+        implementation "com.facebook.react:hermes-android"
+    } else {
+        implementation jscFlavor
+    }
+}
 
-
-  implementation "com.google.firebase:firebase-messaging:23.4.0"
-
-
-  if (hermesEnabled) {
-    implementation "com.facebook.react:hermes-android"
-  } else {
-    implementation jscFlavor
-  }
+/* ───── 모든 서브모듈에서도 같은 버전 강제 ───── */
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force "com.google.android.gms:play-services-base:18.5.0"
+            force "com.google.android.gms:play-services-tasks:18.0.2"
+            force "com.google.android.gms:play-services-location:21.2.0"
+        }
+    }
 }
 
 
-configurations.all {
-  resolutionStrategy {
-    force "com.google.android.gms:play-services-base:18.5.0"
-    force "com.google.android.gms:play-services-tasks:18.0.2"
-    force "com.google.android.gms:play-services-location:21.2.0"
-  }
+def autolinkDir = file("$rootDir/build/generated/autolinking")
+
+tasks.register("prepareAutolinkingDir") {
+    doLast { if (!autolinkDir.exists()) autolinkDir.mkdirs() }
+}
+
+gradle.projectsEvaluated {
+    // RN 플러그인이 등록하는(버전에 따라 다른) 생성 작업 이름 후보들
+    def genJsonTask =
+            tasks.findByName("generateAutolinkingJson") ?:
+            tasks.findByName("generateAutolinking") ?:
+            tasks.findByName("reactNativeConfig") // 아주 구버전 호환
+
+    // 소비 작업(이 작업이 입력으로 autolinking.json을 기대함)
+    def genNewArchTask = tasks.findByName("generateAutolinkingNewArchitectureFiles")
+
+    // 생성 디렉터리 선생성
+    if (genJsonTask) {
+        genJsonTask.dependsOn("prepareAutolinkingDir")
+    }
+
+    // 생성 → 소비 순서 보장
+    if (genJsonTask && genNewArchTask) {
+        genNewArchTask.mustRunAfter(genJsonTask)
+        genNewArchTask.dependsOn(genJsonTask)
+    }
 }
