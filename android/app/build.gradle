@@ -5,8 +5,22 @@ plugins {
   id("com.google.gms.google-services")
 }
 
-react {
-  // 기본값 사용 (autolinkLibrariesWithApp 호출 불필요)
+
+def rnVersion = providers.gradleProperty("REACT_NATIVE_VERSION").orNull
+if (!rnVersion) {
+  def pkg = file("$rootDir/../node_modules/react-native/package.json")
+  if (pkg.exists()) {
+    // "version": "x.y.z" 를 정규식으로 파싱 (외부 라이브러리 의존성 없음)
+    def m = (pkg.text =~ /"version"\s*:\s*"([^"]+)"/)
+    if (m.find()) {
+      rnVersion = m.group(1)
+    }
+  }
+}
+if (!rnVersion) {
+  // 마지막 안전망(프로젝트에 맞게 조정 가능)
+  rnVersion = "0.75.3"
+  logger.lifecycle("REACT_NATIVE_VERSION not provided; falling back to ${rnVersion}")
 }
 
 android {
@@ -18,11 +32,10 @@ android {
 
   defaultConfig {
     applicationId "com.finguard"
-    // RN 0.75 권장 minSdk 24+
-    minSdkVersion 24
+    minSdkVersion 23
     targetSdkVersion 35
 
-    // CI에서 넘겨주는 버전 값 사용
+    // CI에서 넘겨주는 버전 값 사용 (미지정 시 기본값)
     versionCode project.hasProperty("VERSION_CODE") ? project.VERSION_CODE.toInteger() : 1
     versionName project.hasProperty("VERSION_NAME") ? project.VERSION_NAME : "0.1.0"
   }
@@ -42,35 +55,40 @@ android {
     release {
       minifyEnabled false
       shrinkResources false
-      proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro"
-      )
+      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
     }
   }
 
   packaging {
     resources {
-      // 충돌나는 META-INF 파일들 우선 선택
       pickFirsts += ["META-INF/*"]
     }
   }
 }
 
-dependencies {
-  // RN 0.75.x BOM으로 버전 정합성 유지
-  implementation(platform("com.facebook.react:react-native-bom:0.75.4"))
-  implementation("com.facebook.react:react-android")
+def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
 
-  def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
+dependencies {
+  // 설치된 RN 버전에 맞춰 BOM 동기화
+  implementation(platform("com.facebook.react:react-native-bom:${rnVersion}"))
+
+  implementation("com.facebook.react:react-android")
   if (hermesEnabled) {
     implementation("com.facebook.react:hermes-android")
   } else {
     implementation("io.github.react-native-community:jsc-android:250230.2.1")
   }
 
-  // 사용 중인 Google/Firebase 라이브러리
   implementation("com.google.android.gms:play-services-base:18.5.0")
   implementation("com.google.android.gms:play-services-location:21.2.0")
   implementation("com.google.firebase:firebase-messaging:23.4.0")
+}
+
+configurations.all {
+  resolutionStrategy {
+    force "com.facebook.react:react-android:${rnVersion}"
+    if (hermesEnabled) {
+      force "com.facebook.react:hermes-android:${rnVersion}"
+    }
+  }
 }
