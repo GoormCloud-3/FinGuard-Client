@@ -22,6 +22,10 @@ jobs:
       group: rn-release-${{ github.ref }}
       cancel-in-progress: true
 
+    env:
+      JAVA_TOOL_OPTIONS: -Xmx3g
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,11 +34,9 @@ jobs:
           node-version: 20
           cache: npm
 
-      # 루트에서 JS 의존성 설치 (node_modules 생성)
       - name: Install JS deps (root)
         run: npm ci
 
-      # 디버그: 루트 트리/버전 출력
       - name: Print tree (root)
         run: |
           pwd
@@ -42,14 +44,9 @@ jobs:
           node -v
           npm -v
 
- 
       - name: Verify RN gradle plugin exists
         run: |
-          if [ ! -d "node_modules/@react-native/gradle-plugin" ]; then
-            echo "node_modules/@react-native/gradle-plugin 폴더가 없습니다. package.json 위치/설치 위치를 확인하세요."
-            exit 1
-          fi
-          echo "RN gradle plugin found:"
+          test -d node_modules/@react-native/gradle-plugin
           ls -la node_modules/@react-native/gradle-plugin
 
       - name: Setup Java 17
@@ -60,10 +57,15 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+            ndk;27.1.12297006
 
-      - name: Enable Gradle cache
-        uses: gradle/gradle-build-action@v2
-
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Restore keystore from secret
         run: |
@@ -76,16 +78,14 @@ jobs:
           echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
           echo "ANDROID_SIGNING_KEY_ALIAS=${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}" >> $GITHUB_ENV
           echo "ANDROID_SIGNING_KEY_PASSWORD=${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}" >> $GITHUB_ENV
-          # PKCS12 사용하는 경우만 필요
-          # echo "ANDROID_KEYSTORE_TYPE=pkcs12" >> $GITHUB_ENV
 
       - name: Compute version
         id: ver
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"      # v1.2.3
-            NAME="${TAG#v}"                     # 1.2.3
-            BASE="${NAME%%-*}"                  # prerelease 잘라냄 (rc 등)
+            TAG="${GITHUB_REF#refs/tags/}"
+            NAME="${TAG#v}"
+            BASE="${NAME%%-*}"
             IFS='.' read -r MA MI PA <<< "$BASE"
             CODE=$(printf "%d%02d%02d\n" "$MA" "$MI" "$PA")
             CODE=$((CODE*100 + ${{ github.run_number }} % 100))
@@ -103,12 +103,29 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
+      # 🔍 러너가 실제로 어떤 파일을 읽는지 눈으로 확인
+      - name: Print app/build.gradle on runner
+        run: |
+          echo "===== android/app/build.gradle ====="
+          sed -n '1,180p' android/app/build.gradle
+
+      # 🔍 AGP가 인식한 속성 확인 (compileSdk 보이게)
+      - name: Print :app properties
+        working-directory: android
+        run: ./gradlew -q :app:properties || true
+
+      # 오토링킹 입력 폴더 선생성 (안전망)
+      - name: Prepare autolinking dir
+        run: mkdir -p android/build/generated/autolinking
 
       - name: Build Android (release APK)
         working-directory: android
-        run: ./gradlew --no-daemon clean assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME --stacktrace --info
+        run: |
+          ./gradlew --stop
+          ./gradlew --no-configuration-cache --refresh-dependencies clean assembleRelease \
+            -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME \
+            --stacktrace --warning-mode all
 
- 
       - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
