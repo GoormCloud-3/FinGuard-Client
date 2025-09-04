@@ -66,7 +66,6 @@ jobs:
           set -euo pipefail
           echo "ANDROID_HOME=${ANDROID_HOME}"
 
-          # sdkmanager 경로 자동 탐색
           CANDIDATES=(
             "${ANDROID_HOME}/cmdline-tools/17.0/bin/sdkmanager"
             "${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
@@ -90,12 +89,10 @@ jobs:
           echo "Using sdkmanager at: ${SDKMANAGER}"
           "${SDKMANAGER}" --version || true
 
-          # yes 파이프 SIGPIPE 경고를 실패로 취급하지 않도록 pipefail 잠시 해제
           set +o pipefail
           yes | "${SDKMANAGER}" --licenses || true
           set -o pipefail
 
-          # 필요한 패키지 각각 인자로 설치
           "${SDKMANAGER}" --install \
             "platform-tools" \
             "platforms;android-35" \
@@ -136,6 +133,15 @@ jobs:
           echo "version_name=$NAME" >> $GITHUB_OUTPUT
           echo "version_code=$CODE" >> $GITHUB_OUTPUT
           echo "Computed VERSION_NAME=$NAME, VERSION_CODE=$CODE"
+
+      # 🔧 RN CLI로 autolinking.json 선생성 (플러그인이 기대하는 경로)
+      - name: Generate autolinking.json (RN CLI)
+        run: |
+          set -euo pipefail
+          mkdir -p android/build/generated/autolinking
+          npx --yes react-native config > android/build/generated/autolinking/autolinking.json
+          test -s android/build/generated/autolinking/autolinking.json || (echo "autolinking.json empty"; exit 1)
+          echo "autolinking.json generated"
 
       - name: Make gradlew executable
         working-directory: android
