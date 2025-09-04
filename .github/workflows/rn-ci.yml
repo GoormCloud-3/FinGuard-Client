@@ -66,9 +66,18 @@ jobs:
       - name: Enable Gradle cache
         uses: gradle/gradle-build-action@v2
 
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
+
+      # 오토링킹 산출물 먼저 생성
+      - name: Generate RN autolinking (Android)
+        working-directory: android
+        run: ./gradlew --no-daemon :app:generateAutolinkingJson --stacktrace
+
       - name: Build Android (debug)
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon assembleDebug --stacktrace --info
 
       - name: Upload debug APK
         if: always()

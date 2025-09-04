@@ -33,7 +33,7 @@ jobs:
       - name: Install JS deps (root)
         run: npm ci
 
-      - name: Print tree (root)
+      - name: Print env
         run: |
           pwd
           ls -la
@@ -58,10 +58,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.1.12297006
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+            ndk;27.1.12297006
 
       - name: Enable Gradle cache
         uses: gradle/gradle-build-action@v2
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x gradlew
 
       - name: Restore keystore from secret
         run: |
@@ -95,9 +103,10 @@ jobs:
           echo "version_code=$CODE" >> $GITHUB_OUTPUT
           echo "Computed VERSION_NAME=$NAME, VERSION_CODE=$CODE"
 
-      - name: Make gradlew executable
+      # 오토링킹 산출물 먼저 생성
+      - name: Generate RN autolinking (Android)
         working-directory: android
-        run: chmod +x gradlew
+        run: ./gradlew --no-daemon :app:generateAutolinkingJson --stacktrace
 
       - name: Build Android (release APK)
         working-directory: android

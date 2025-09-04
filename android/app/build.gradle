@@ -1,41 +1,48 @@
+
 plugins {
-  id 'com.android.application'
-  id 'org.jetbrains.kotlin.android'
-  id 'com.facebook.react'
-  id 'com.google.gms.google-services'
+  id("com.android.application")
+  id("org.jetbrains.kotlin.android")
+  id("com.facebook.react")
+  id("com.google.gms.google-services")
 }
 
+
 react {
-  autolinkLibrariesWithApp()
+  // 기본값 사용 (autolinkLibrariesWithApp() 호출 제거)
 }
 
 android {
   namespace "com.finguard"
 
-  // 신/구 DSL을 모두 표기 (일부 환경 오탐 방지)
+  // 한 가지만 명시 (중복/오탐 방지)
   compileSdk 35
-  compileSdkVersion 35
 
-  buildToolsVersion rootProject.ext.buildToolsVersion
-  ndkVersion rootProject.ext.ndkVersion
+
+  buildToolsVersion "35.0.0"
+  ndkVersion "27.1.12297006"
 
   defaultConfig {
-     applicationId "com.finguard"   // 프로젝트에 맞게
-        minSdkVersion 23               // 프로젝트 요구사항에 맞게
-        targetSdkVersion 35
-        // 워크플로우에서 넘겨주는 버전 값 사용
-        versionCode project.hasProperty('VERSION_CODE') ? project.VERSION_CODE.toInteger() : 1
-        versionName project.hasProperty('VERSION_NAME') ? project.VERSION_NAME : "0.1.0"
+    applicationId "com.finguard"
+    minSdkVersion 23
+    targetSdkVersion 35
+
+    // CI에서 넘겨주는 버전 값 사용
+    versionCode project.hasProperty("VERSION_CODE") ? project.VERSION_CODE.toInteger() : 1
+    versionName project.hasProperty("VERSION_NAME") ? project.VERSION_NAME : "0.1.0"
   }
 
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_17
     targetCompatibility JavaVersion.VERSION_17
   }
-  kotlinOptions { jvmTarget = "17" }
+  kotlinOptions {
+    jvmTarget = "17"
+  }
 
   buildTypes {
-    debug { signingConfig signingConfigs.debug }
+    debug {
+      signingConfig signingConfigs.debug
+    }
     release {
       minifyEnabled false
       shrinkResources false
@@ -51,42 +58,18 @@ android {
 }
 
 dependencies {
+
   implementation(platform("com.facebook.react:react-native-bom:0.75.4"))
-  implementation "com.facebook.react:react-android"
+  implementation("com.facebook.react:react-android")
 
   def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
   if (hermesEnabled) {
-    implementation "com.facebook.react:hermes-android"
+    implementation("com.facebook.react:hermes-android")
   } else {
-    implementation "io.github.react-native-community:jsc-android:250230.2.1"
+    implementation("io.github.react-native-community:jsc-android:250230.2.1")
   }
 
-  implementation "com.google.android.gms:play-services-base:18.5.0"
-  implementation "com.google.android.gms:play-services-location:21.2.0"
-  implementation "com.google.firebase:firebase-messaging:23.4.0"
-}
-
-
-def autolinkDir = file("$rootDir/build/generated/autolinking")
-tasks.register("prepareAutolinkingDir") {
-  doLast {
-    if (!autolinkDir.exists()) autolinkDir.mkdirs()
-  }
-}
-
-gradle.projectsEvaluated {
-  def genJsonTask =
-      tasks.findByName("generateAutolinkingJson") ?:
-      tasks.findByName("generateAutolinking") ?:
-      tasks.findByName("reactNativeConfig")
-
-  def genNewArchTask = tasks.findByName("generateAutolinkingNewArchitectureFiles")
-
-  if (genJsonTask) {
-    genJsonTask.dependsOn("prepareAutolinkingDir")
-  }
-  if (genJsonTask && genNewArchTask) {
-    genNewArchTask.mustRunAfter(genJsonTask)
-    genNewArchTask.dependsOn(genJsonTask)
-  }
+  implementation("com.google.android.gms:play-services-base:18.5.0")
+  implementation("com.google.android.gms:play-services-location:21.2.0")
+  implementation("com.google.firebase:firebase-messaging:23.4.0")
 }
