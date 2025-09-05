@@ -43,7 +43,7 @@ jobs:
       - name: Verify RN gradle plugin exists
         run: |
           if [ ! -d "node_modules/@react-native/gradle-plugin" ]; then
-            echo "node_modules/@react-native/gradle-plugin 폴더가 없습니다. package.json 위치/설치 위치를 확인하세요."
+            echo "node_modules/@react-native/gradle-plugin 폴더가 없습니다. package.json / 설치를 확인하세요."
             exit 1
           fi
           echo "RN gradle plugin found:"
@@ -55,11 +55,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # 1) ANDROID SDK만 세팅 (패키지 자동설치 안 씀)
+      # 1) ANDROID SDK 세팅
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 2) 라이선스 수락 + 필요한 패키지 직접 설치 (패키지들을 '각각의 인자'로 전달)
+      # 2) 라이선스 수락 + 필요한 패키지 설치
       - name: Accept licenses and install SDK packages
         shell: bash
         run: |
@@ -88,7 +88,9 @@ jobs:
 
       - name: Compute version
         id: ver
+        shell: bash
         run: |
+          set -euo pipefail
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
             NAME="${TAG#v}"
@@ -110,23 +112,21 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
-      # clean만 먼저 수행
+      # (선택) 의존성 동기화/태스크 준비
+      - name: Gradle help (prime configuration)
+        working-directory: android
+        run: ./gradlew --no-daemon help
+
+      # 🔹 RN 오토링킹 산출물 생성 (Gradle 태스크 사용; 수동 npx 금지)
+      - name: Generate RN autolinking (Gradle)
+        working-directory: android
+        run: ./gradlew --no-daemon :app:generateAutolinkingPackageList
+
+      # clean → assemble 순으로 진행 (clean 재호출 X)
       - name: Gradle clean
         working-directory: android
         run: ./gradlew --no-daemon clean
 
-      # clean 이후 RN CLI로 autolinking.json 생성
-      - name: Generate autolinking.json (RN CLI)
-        run: |
-          set -euo pipefail
-          mkdir -p android/build/generated/autolinking
-          npx --yes react-native config > android/build/generated/autolinking/autolinking.json
-          test -s android/build/generated/autolinking/autolinking.json
-          echo "autolinking.json generated"
-          ls -la android/build/generated/autolinking
-          head -n 3 android/build/generated/autolinking/autolinking.json || true
-
-      # assemble만 수행 (clean 다시 하지 않음)
       - name: Build Android (release APK)
         working-directory: android
         run: ./gradlew --no-daemon assembleRelease -PVERSION_CODE=$VERSION_CODE -PVERSION_NAME=$VERSION_NAME --stacktrace --info

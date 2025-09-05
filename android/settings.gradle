@@ -3,19 +3,17 @@ pluginManagement {
     gradlePluginPortal()
     google()
     mavenCentral()
-    // RN가 필요로 하는 로컬 maven들
+    // RN 로컬 maven
     maven { url = uri("$rootDir/../node_modules/react-native/android") }
     maven { url = uri("$rootDir/../node_modules/jsc-android/dist") }
   }
-
-  // 플러그인 버전 고정(권장)
+  // AGP/Kotlin/Google Services 버전은 네가 쓰던 걸 유지
   plugins {
     id("com.android.application") version "8.10.1"
     id("org.jetbrains.kotlin.android") version "2.1.20"
     id("com.google.gms.google-services") version "4.4.1"
   }
-
-  // RN Gradle 플러그인을 includeBuild로 연결
+  // RN 0.80 플러그인 포함
   includeBuild("../node_modules/@react-native/gradle-plugin")
 }
 
@@ -31,3 +29,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "FinGuard"
 include(":app")
+

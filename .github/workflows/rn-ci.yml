@@ -55,11 +55,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # SDK만 세팅
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 필요한 패키지 직접 설치 (CI는 NDK 보통 불필요)
       - name: Accept licenses and install SDK packages
         shell: bash
         run: |
@@ -77,23 +75,20 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
-      # clean만 먼저
+      # (선택) 구성 프라임
+      - name: Gradle help (prime configuration)
+        working-directory: android
+        run: ./gradlew --no-daemon help
+
+      # 🔹 RN 오토링킹 산출물 생성 (Gradle 태스크 사용)
+      - name: Generate RN autolinking (Gradle)
+        working-directory: android
+        run: ./gradlew --no-daemon :app:generateAutolinkingPackageList
+
       - name: Gradle clean
         working-directory: android
         run: ./gradlew --no-daemon clean
 
-      # clean 이후 autolinking.json 생성
-      - name: Generate autolinking.json (RN CLI)
-        run: |
-          set -euo pipefail
-          mkdir -p android/build/generated/autolinking
-          npx --yes react-native config > android/build/generated/autolinking/autolinking.json
-          test -s android/build/generated/autolinking/autolinking.json
-          echo "autolinking.json generated"
-          ls -la android/build/generated/autolinking
-          head -n 3 android/build/generated/autolinking/autolinking.json || true
-
-      # assemble만
       - name: Build Android (debug)
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug

@@ -1,9 +1,54 @@
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
-  id("com.facebook.react")
+  id("com.facebook.react")         
   id("com.google.gms.google-services")
 }
+
+react {
+
+  nodeExecutableAndArgs = ["node"]
+
+}
+
+android {
+  namespace "com.finguard"
+
+
+  compileSdk 35
+
+  defaultConfig {
+    applicationId "com.finguard"
+    minSdk 24
+    targetSdk 35
+
+    versionCode project.hasProperty("VERSION_CODE") ? project.VERSION_CODE.toInteger() : 1
+    versionName project.hasProperty("VERSION_NAME") ? project.VERSION_NAME : "0.1.0"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+  kotlinOptions { jvmTarget = "17" }
+
+  buildTypes {
+    debug { signingConfig signingConfigs.debug }
+    release {
+      minifyEnabled false
+      shrinkResources false
+      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+    }
+  }
+}
+
+repositories {
+  google()
+  mavenCentral()
+}
+
+
+def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
 
 
 def rnVersion = providers.gradleProperty("REACT_NATIVE_VERSION").orNull
@@ -15,78 +60,24 @@ if (!rnVersion) {
   }
 }
 if (!rnVersion) {
-  rnVersion = "0.75.3" 
+  rnVersion = "0.80.0"
   logger.lifecycle("REACT_NATIVE_VERSION not provided; falling back to ${rnVersion}")
 }
-
 def rnAarVersion = rnVersion.replaceAll(/-.+$/, "")
 
-
-react {
-  autolinkLibrariesWithApp()
-}
-
-android {
-  namespace "com.finguard"
-
-  compileSdk 35
-  buildToolsVersion "35.0.0"
-  ndkVersion "27.1.12297006"
-
-  defaultConfig {
-    applicationId "com.finguard"
-  
-    minSdkVersion 24
-    targetSdkVersion 35
-
-    versionCode project.hasProperty("VERSION_CODE") ? project.VERSION_CODE.toInteger() : 1
-    versionName project.hasProperty("VERSION_NAME") ? project.VERSION_NAME : "0.1.0"
-  }
-
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_17
-    targetCompatibility JavaVersion.VERSION_17
-  }
-  kotlinOptions {
-    jvmTarget = "17"
-  }
-
-  buildTypes {
-    debug {
-      signingConfig signingConfigs.debug
-    }
-    release {
-      minifyEnabled false
-      shrinkResources false
-      proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-    }
-  }
-
-  packaging {
-    resources {
-      pickFirsts += ["META-INF/*"]
-    }
-  }
-}
-
-// Hermes on/off
-def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
-
 dependencies {
-
   implementation("com.facebook.react:react-android:${rnAarVersion}")
-
   if (hermesEnabled) {
     implementation("com.facebook.react:hermes-android:${rnAarVersion}")
   } else {
     implementation("io.github.react-native-community:jsc-android:250230.2.1")
   }
 
+
   implementation("com.google.android.gms:play-services-base:18.5.0")
   implementation("com.google.android.gms:play-services-location:21.2.0")
   implementation("com.google.firebase:firebase-messaging:23.4.0")
 }
-
 
 configurations.all {
   resolutionStrategy {
@@ -95,4 +86,59 @@ configurations.all {
       force "com.facebook.react:hermes-android:${rnAarVersion}"
     }
   }
+}
+
+
+def rnRootDir = file("$rootDir/..")
+def autoDir   = file("$rootDir/build/generated/autolinking")
+def autoFile  = file("$rootDir/build/generated/autolinking/autolinking.json")
+
+tasks.register("createAutolinkingJson") {
+  outputs.file(autoFile)
+  doLast {
+    if (!autoDir.exists()) { autoDir.mkdirs() }
+
+
+    def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
+    def nodeCmd = isWindows ? "node.exe" : "node"
+
+ 
+    def cliCandidates = [
+      new File(rnRootDir, "node_modules/@react-native-community/cli/build/bin.js"),
+      new File(rnRootDir, "node_modules/@react-native-community/cli/build/index.js"),
+      new File(rnRootDir, "node_modules/react-native/cli.js"),
+    ]
+    def rnCli = cliCandidates.find { it.exists() }
+    if (rnCli == null) {
+      throw new GradleException(
+        "React Native CLI를 찾을 수 없습니다. 루트에서 의존성을 먼저 설치(npm ci / yarn)하세요.\n" +
+        "Tried:\n - " + cliCandidates.collect { it.path }.join("\n - ")
+      )
+    }
+
+
+    def pb = new ProcessBuilder(nodeCmd, rnCli.absolutePath, "config", "--platform", "android")
+    pb.directory(rnRootDir)
+    pb.redirectErrorStream(true)
+    def p = pb.start()
+    def out = p.getInputStream().getText("UTF-8")
+    def code = p.waitFor()
+    if (code != 0 || out == null || out.trim().isEmpty()) {
+      throw new GradleException("`react-native config --platform android` 실패 (code: ${code}). 출력:\n${out}")
+    }
+    autoFile.text = out
+    println("Generated autolinking.json at: " + autoFile)
+  }
+}
+
+
+def rnGenTasks = [
+  "generateAutolinkingPackageList",
+  "generateReactNativeEntryPoint",
+  "generateAutolinkingNewArchitecturesFile"
+]
+
+tasks.matching { it.name in rnGenTasks }.configureEach {
+  dependsOn(tasks.named("createAutolinkingJson"))
+  inputs.file(autoFile) 
 }
