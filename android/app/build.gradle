@@ -38,9 +38,9 @@ android {
       minifyEnabled false
       shrinkResources false
       proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-    }
-  }
-}
+      }
+      }
+      }
 
 repositories {
   google()
@@ -140,5 +140,5 @@ def rnGenTasks = [
 
 tasks.matching { it.name in rnGenTasks }.configureEach {
   dependsOn(tasks.named("createAutolinkingJson"))
-  inputs.file(autoFile) 
+  inputs.file(autoFile)
 }
