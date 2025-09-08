@@ -1,20 +1,16 @@
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
-  id("com.facebook.react")         
+  id("com.facebook.react")
   id("com.google.gms.google-services")
 }
 
 react {
-
   nodeExecutableAndArgs = ["node"]
-
 }
 
 android {
   namespace "com.finguard"
-
-
   compileSdk 35
 
   defaultConfig {
@@ -30,26 +26,40 @@ android {
     sourceCompatibility JavaVersion.VERSION_17
     targetCompatibility JavaVersion.VERSION_17
   }
+
   kotlinOptions { jvmTarget = "17" }
 
-  buildTypes {
-    debug { signingConfig signingConfigs.debug }
+  // 🔐 🔽 signingConfigs 추가
+  signingConfigs {
     release {
+      storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
+      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+      keyAlias System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+      keyPassword System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+    }
+  }
+
+  buildTypes {
+    debug {
+      signingConfig signingConfigs.debug
+    }
+    release {
+      // 🔐 🔽 릴리즈 서명 설정 연결
+      signingConfig signingConfigs.release
+
       minifyEnabled false
       shrinkResources false
       proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-      }
-      }
-      }
+    }
+  }
+}
 
 repositories {
   google()
   mavenCentral()
 }
 
-
 def hermesEnabled = (project.findProperty("hermesEnabled") ?: "true").toBoolean()
-
 
 def rnVersion = providers.gradleProperty("REACT_NATIVE_VERSION").orNull
 if (!rnVersion) {
@@ -73,7 +83,6 @@ dependencies {
     implementation("io.github.react-native-community:jsc-android:250230.2.1")
   }
 
-
   implementation("com.google.android.gms:play-services-base:18.5.0")
   implementation("com.google.android.gms:play-services-location:21.2.0")
   implementation("com.google.firebase:firebase-messaging:23.4.0")
@@ -88,7 +97,6 @@ configurations.all {
   }
 }
 
-
 def rnRootDir = file("$rootDir/..")
 def autoDir   = file("$rootDir/build/generated/autolinking")
 def autoFile  = file("$rootDir/build/generated/autolinking/autolinking.json")
@@ -98,11 +106,9 @@ tasks.register("createAutolinkingJson") {
   doLast {
     if (!autoDir.exists()) { autoDir.mkdirs() }
 
-
     def isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows()
     def nodeCmd = isWindows ? "node.exe" : "node"
 
- 
     def cliCandidates = [
       new File(rnRootDir, "node_modules/@react-native-community/cli/build/bin.js"),
       new File(rnRootDir, "node_modules/@react-native-community/cli/build/index.js"),
@@ -115,7 +121,6 @@ tasks.register("createAutolinkingJson") {
         "Tried:\n - " + cliCandidates.collect { it.path }.join("\n - ")
       )
     }
-
 
     def pb = new ProcessBuilder(nodeCmd, rnCli.absolutePath, "config", "--platform", "android")
     pb.directory(rnRootDir)
@@ -130,7 +135,6 @@ tasks.register("createAutolinkingJson") {
     println("Generated autolinking.json at: " + autoFile)
   }
 }
-
 
 def rnGenTasks = [
   "generateAutolinkingPackageList",
