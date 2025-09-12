@@ -28,6 +28,7 @@ build/
 .idea
 .gradle
 local.properties
+your_keystore_file.jks
 *.iml
 *.hprof
 .cxx/
@@ -53,7 +54,7 @@ yarn-error.log
 **/fastlane/Preview.html
 **/fastlane/screenshots
 **/fastlane/test_output
-
+keystore.properties
 # Bundle artifact
 *.jsbundle
 

@@ -28,17 +28,22 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name:  Checkout code
+        uses: actions/checkout@v4
 
-      - uses: gradle/wrapper-validation-action@v2
+      - name: Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v2
 
-      - uses: actions/setup-node@v4
+      - name:  Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name:  Clean & Install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
 
       - name: Type check
         run: npm run typecheck --if-present
@@ -75,25 +80,24 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
-      # (선택) 구성 프라임
-      - name: Gradle help (prime configuration)
+      - name: Clean android build
+        working-directory: android
+        run: ./gradlew --no-daemon clean
+
+      - name:  Prime Gradle config
         working-directory: android
         run: ./gradlew --no-daemon help
 
-      #  RN 오토링킹 산출물 생성 (Gradle 태스크 사용)
+
       - name: Generate RN autolinking (Gradle)
         working-directory: android
         run: ./gradlew --no-daemon :app:generateAutolinkingPackageList
-
-      - name: Gradle clean
-        working-directory: android
-        run: ./gradlew --no-daemon clean
 
       - name: Build Android (debug)
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug
 
-      - name: Upload debug APK
+      - name: ⬆Upload debug APK
         if: always()
         uses: actions/upload-artifact@v4
         with:

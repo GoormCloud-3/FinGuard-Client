@@ -30,7 +30,7 @@ android {
 
   kotlinOptions { jvmTarget = "17" }
 
-  // signingConfigs 추가
+  // 🔐 🔽 signingConfigs 추가
   signingConfigs {
     release {
       storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
@@ -45,7 +45,7 @@ android {
       signingConfig signingConfigs.debug
     }
     release {
-      //릴리즈 서명 설정 연결
+      // 🔐 🔽 릴리즈 서명 설정 연결
       signingConfig signingConfigs.release
 
       minifyEnabled false
