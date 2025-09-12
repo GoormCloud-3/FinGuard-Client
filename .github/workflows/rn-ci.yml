@@ -28,42 +28,42 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - name: 📦 Checkout code
+      - name:  Checkout code
         uses: actions/checkout@v4
 
-      - name: 🧪 Validate Gradle Wrapper
+      - name: Validate Gradle Wrapper
         uses: gradle/wrapper-validation-action@v2
 
-      - name: 🧱 Setup Node.js
+      - name:  Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - name: 🔄 Clean & Install dependencies
+      - name:  Clean & Install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install
 
-      - name: 🔍 Type check
+      - name: Type check
         run: npm run typecheck --if-present
 
-      - name: ✨ Lint
+      - name: Lint
         run: npm run lint --if-present
 
-      - name: 🧪 Unit test
+      - name: Unit test
         run: npm test --if-present -- --ci
 
-      - name: ☕ Setup Java 17
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: 🤖 Setup Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: ✅ Accept licenses and install SDK packages
+      - name: Accept licenses and install SDK packages
         shell: bash
         run: |
           set -euo pipefail
@@ -73,30 +73,30 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.0"
 
-      - name: 💾 Enable Gradle cache
+      - name: Enable Gradle cache
         uses: gradle/gradle-build-action@v2
 
-      - name: 🔓 Make gradlew executable
+      - name: Make gradlew executable
         working-directory: android
         run: chmod +x gradlew
 
-      - name: 🧹 Clean android build
+      - name: Clean android build
         working-directory: android
         run: ./gradlew --no-daemon clean
 
-      - name: ⚙️ Prime Gradle config
+      - name:  Prime Gradle config
         working-directory: android
         run: ./gradlew --no-daemon help
 
-      - name: 🔗 Generate RN autolinking (Gradle)
+      - name: Generate RN autolinking (Gradle)
         working-directory: android
         run: ./gradlew --no-daemon :app:generateAutolinkingPackageList
 
-      - name: 🛠️ Build Android (debug)
+      - name: Build Android (debug)
         working-directory: android
         run: ./gradlew --no-daemon assembleDebug
 
-      - name: ⬆️ Upload debug APK
+      - name: ⬆Upload debug APK
         if: always()
         uses: actions/upload-artifact@v4
         with:
