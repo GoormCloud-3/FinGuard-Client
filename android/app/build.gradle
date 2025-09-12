@@ -30,7 +30,7 @@ android {
 
   kotlinOptions { jvmTarget = "17" }
 
-  // 🔐 🔽 signingConfigs 추가
+  // signingConfigs 추가
   signingConfigs {
     release {
       storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
@@ -45,7 +45,7 @@ android {
       signingConfig signingConfigs.debug
     }
     release {
-      // 🔐 🔽 릴리즈 서명 설정 연결
+      // 릴리즈 서명 설정 연결
       signingConfig signingConfigs.release
 
       minifyEnabled false
@@ -123,7 +123,6 @@ tasks.register("createAutolinkingJson") {
     def rnCli = cliCandidates.find { it.exists() }
     if (rnCli == null) {
       throw new GradleException(
-        "React Native CLI를 찾을 수 없습니다. 루트에서 의존성을 먼저 설치(npm ci / yarn)하세요.\n" +
         "Tried:\n - " + cliCandidates.collect { it.path }.join("\n - ")
       )
     }
