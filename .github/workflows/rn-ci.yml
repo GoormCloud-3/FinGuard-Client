@@ -80,7 +80,7 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon help
 
-      # 🔹 RN 오토링킹 산출물 생성 (Gradle 태스크 사용)
+      #  RN 오토링킹 산출물 생성 (Gradle 태스크 사용)
       - name: Generate RN autolinking (Gradle)
         working-directory: android
         run: ./gradlew --no-daemon :app:generateAutolinkingPackageList

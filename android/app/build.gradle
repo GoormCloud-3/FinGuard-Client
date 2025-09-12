@@ -25,11 +25,12 @@ android {
   compileOptions {
     sourceCompatibility JavaVersion.VERSION_17
     targetCompatibility JavaVersion.VERSION_17
+    coreLibraryDesugaringEnabled true
   }
 
   kotlinOptions { jvmTarget = "17" }
 
-  // 🔐 🔽 signingConfigs 추가
+  // signingConfigs 추가
   signingConfigs {
     release {
       storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
@@ -44,7 +45,7 @@ android {
       signingConfig signingConfigs.debug
     }
     release {
-      // 🔐 🔽 릴리즈 서명 설정 연결
+      //릴리즈 서명 설정 연결
       signingConfig signingConfigs.release
 
       minifyEnabled false
@@ -86,6 +87,11 @@ dependencies {
   implementation("com.google.android.gms:play-services-base:18.5.0")
   implementation("com.google.android.gms:play-services-location:21.2.0")
   implementation("com.google.firebase:firebase-messaging:23.4.0")
+
+
+  
+
+
 }
 
 configurations.all {
